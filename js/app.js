@@ -41,6 +41,11 @@
     nextBtn: $("nextBtn"),
     replayBtn: $("replayBtn"),
     resetProgressBtn: $("resetProgressBtn"),
+    homeScreen: $("homeScreen"),
+    homeBtn: $("homeBtn"),
+    startBtn: $("startBtn"),
+    demoCode: $("demoCode"),
+    demoStrip: $("demoStrip"),
   };
 
   const PROGRESS_KEY = "roboquest-progress";
@@ -424,6 +429,63 @@
     }
   }
 
+  // ---------- Home screen ----------
+
+  const HOME_SEEN_KEY = "roboquest-seen-home";
+  const DEMO_PROGRAM = ["move", "move", "pickup", "move", "move"];
+  // Robo walks a 5-cell strip: gem on cell 2, flag on cell 4.
+  const DEMO_FRAMES = [
+    { line: -1, pos: 0, gem: true },
+    { line: 0, pos: 1, gem: true },
+    { line: 1, pos: 2, gem: true },
+    { line: 2, pos: 2, gem: false },
+    { line: 3, pos: 3, gem: false },
+    { line: 4, pos: 4, gem: false },
+  ];
+  let demoTimer = null;
+  let demoIdx = 0;
+
+  function renderDemoFrame(f) {
+    els.demoCode.innerHTML = DEMO_PROGRAM
+      .map((l, i) => `<span class="demo-line${i === f.line ? " active" : ""}">${l}</span>`)
+      .join("");
+    els.demoStrip.innerHTML = "";
+    for (let i = 0; i < 5; i++) {
+      const cell = document.createElement("div");
+      cell.className = "demo-cell";
+      if (i === f.pos) cell.textContent = "🤖";
+      else if (i === 2 && f.gem) cell.textContent = "💎";
+      else if (i === 4) cell.textContent = "🏁";
+      els.demoStrip.appendChild(cell);
+    }
+  }
+
+  function showHome() {
+    els.homeScreen.hidden = false;
+    demoIdx = 0;
+    renderDemoFrame(DEMO_FRAMES[0]);
+    if (demoTimer) clearInterval(demoTimer);
+    demoTimer = setInterval(() => {
+      demoIdx = (demoIdx + 1) % (DEMO_FRAMES.length + 2); // 2 extra beats to admire the finish
+      renderDemoFrame(DEMO_FRAMES[Math.min(demoIdx, DEMO_FRAMES.length - 1)]);
+    }, 900);
+  }
+
+  function hideHome() {
+    els.homeScreen.hidden = true;
+    if (demoTimer) {
+      clearInterval(demoTimer);
+      demoTimer = null;
+    }
+    localStorage.setItem(HOME_SEEN_KEY, "yes");
+  }
+
+  els.homeBtn.addEventListener("click", showHome);
+  els.startBtn.addEventListener("click", () => {
+    hideHome();
+    els.editor.focus();
+  });
+
   // ---------- Events ----------
 
   els.runBtn.addEventListener("click", run);
@@ -502,4 +564,7 @@
     if (completed.has(LEVELS[i].id)) start = i;
   }
   loadLevel(start);
+
+  // First visit: open with the story of what coding is.
+  if (!localStorage.getItem(HOME_SEEN_KEY)) showHome();
 })();

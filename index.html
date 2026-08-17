@@ -13,10 +13,52 @@
     <nav class="header-nav" aria-label="Menu">
       <button id="tocBtn" class="nav-btn">🗺️ Levels <span id="starTally" class="star-tally"></span></button>
       <button id="bookBtn" class="nav-btn">📖 Handbook</button>
+      <button id="homeBtn" class="nav-btn" title="What is coding?">🤔 What is coding?</button>
     </nav>
     <span class="header-spacer"></span>
     <button id="resetProgressBtn" class="ghost-btn" title="Erase all stars and start from level 1">Start over</button>
   </header>
+
+  <!-- Home screen: what coding is, before the game -->
+  <div class="home" id="homeScreen" hidden>
+    <div class="home-inner">
+      <div class="home-hero">
+        <div class="home-robot">🤖</div>
+        <h1>RoboQuest</h1>
+        <p class="home-tag">Learn the secret language of computers</p>
+      </div>
+
+      <section class="home-card">
+        <h2>🤫 Here's a secret: computers aren't smart</h2>
+        <p>They can't think of anything all by themselves! But they are <b>amazing</b> at
+        following instructions — exactly, super fast, and they never, ever get tired.</p>
+        <p class="home-big">Coding is <b>teaching a computer what to do</b>.</p>
+      </section>
+
+      <section class="home-card">
+        <h2>📝 You teach it with instructions</h2>
+        <p>You write a list of steps, and the computer follows your list from top to bottom.
+        Watch Robo follow this one:</p>
+        <div class="demo">
+          <div class="demo-code" id="demoCode"></div>
+          <div class="demo-strip" id="demoStrip"></div>
+        </div>
+        <p>A list like that is called a <b>program</b> — and writing programs is coding!</p>
+      </section>
+
+      <section class="home-card">
+        <h2>🌍 A set of instructions is a language</h2>
+        <p>Instructions that people and computers both understand make a
+        <b>programming language</b>. Grown-up coders use languages with funny names like
+        <b>Python</b> 🐍, <b>JavaScript</b> ⚡ and <b>Scratch</b> 🐱.</p>
+        <p>We're starting with one made just for fun: the <b>Robo language</b> —
+        and you're about to learn it!</p>
+      </section>
+
+      <button class="run-btn home-start" id="startBtn">▶ Teach Robo your first instruction</button>
+      <p class="home-sub">20 levels · collect ⭐ · become a coder</p>
+    </div>
+  </div>
 
   <main class="layout">
     <!-- Left: the lesson -->
