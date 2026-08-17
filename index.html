@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RoboQuest — Learn to Code!</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">🤖 <span class="logo-text">RoboQuest</span></div>
+    <nav class="header-nav" aria-label="Menu">
+      <button id="tocBtn" class="nav-btn">🗺️ Levels <span id="starTally" class="star-tally"></span></button>
+      <button id="bookBtn" class="nav-btn">📖 Handbook</button>
+    </nav>
+    <span class="header-spacer"></span>
+    <button id="resetProgressBtn" class="ghost-btn" title="Erase all stars and start from level 1">Start over</button>
+  </header>
+
+  <main class="layout">
+    <!-- Left: the lesson -->
+    <section class="card info-panel">
+      <div class="concept-badge" id="conceptBadge"></div>
+      <h1 id="levelTitle"></h1>
+      <p class="intro" id="intro"></p>
+      <div class="rules" id="rules"></div>
+      <details class="hint-box" id="hintBox">
+        <summary>💡 Need a hint?</summary>
+        <p id="hintText"></p>
+      </details>
+      <div class="command-ref">
+        <h2>Robo's words</h2>
+        <dl id="commandList"></dl>
+        <p class="checks-note" id="checksNote"></p>
+      </div>
+    </section>
+
+    <!-- Middle: the world -->
+    <section class="world-panel">
+      <div class="board-frame">
+        <div class="board" id="board">
+          <div class="grid" id="grid"></div>
+          <div class="robot" id="robot" aria-label="Robo the robot">
+            <span class="robot-face">🤖</span>
+            <span class="dir-arrow" id="dirArrow">➤</span>
+          </div>
+        </div>
+      </div>
+      <div class="status-row">
+        <span class="gem-count" id="gemCount"></span>
+      </div>
+      <div class="speech" id="speech" role="status">
+        <span class="speech-robo">🤖</span>
+        <span class="speech-text" id="speechText"></span>
+      </div>
+    </section>
+
+    <!-- Right: the program -->
+    <section class="card code-panel">
+      <div class="code-head">
+        <h2>Your program</h2>
+        <span class="line-info" id="lineInfo"></span>
+      </div>
+      <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off"
+        placeholder="Type your instructions here…&#10;one per line"></textarea>
+      <div class="controls">
+        <button id="runBtn" class="run-btn">▶ Run</button>
+        <button id="resetBtn" class="reset-btn">↺ Reset</button>
+        <label class="speed-label">Speed
+          <select id="speed">
+            <option value="450">🐢 Slow</option>
+            <option value="240" selected>🚶 Normal</option>
+            <option value="90">🐇 Fast</option>
+          </select>
+        </label>
+      </div>
+      <p class="kbd-tip">Tip: press <kbd>⌘</kbd>+<kbd>Enter</kbd> to run</p>
+    </section>
+  </main>
+
+  <!-- Table of contents -->
+  <div class="modal-overlay" id="tocOverlay" hidden>
+    <div class="modal-card" role="dialog" aria-label="Table of contents">
+      <div class="modal-head">
+        <h2>🗺️ Robo's Adventure Map</h2>
+        <button class="close-btn" id="tocClose" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body" id="tocBody"></div>
+    </div>
+  </div>
+
+  <!-- Handbook -->
+  <div class="modal-overlay" id="bookOverlay" hidden>
+    <div class="modal-card" role="dialog" aria-label="Robo's handbook">
+      <div class="modal-head">
+        <h2>📖 Robo's Handbook</h2>
+        <button class="close-btn" id="bookClose" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body" id="bookBody"></div>
+    </div>
+  </div>
+
+  <!-- Win celebration -->
+  <div class="win-overlay" id="winOverlay" hidden>
+    <div class="win-card">
+      <div class="win-confetti" id="confetti" aria-hidden="true"></div>
+      <div class="win-emoji">🎉</div>
+      <h2 id="winTitle">Level complete!</h2>
+      <p id="winSub"></p>
+      <div class="win-buttons">
+        <button id="replayBtn" class="reset-btn">↺ Play again</button>
+        <button id="nextBtn" class="run-btn">Next level →</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/interpreter.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
