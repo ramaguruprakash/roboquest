@@ -80,6 +80,7 @@
 
     <!-- Middle: the world -->
     <section class="world-panel">
+      <div class="world-tabs" id="worldTabs" hidden></div>
       <div class="board-frame">
         <div class="board" id="board">
           <div class="grid" id="grid"></div>
@@ -133,13 +134,15 @@
   </div>
 
   <!-- Handbook -->
-  <div class="modal-overlay" id="bookOverlay" hidden>
-    <div class="modal-card" role="dialog" aria-label="Robo's handbook">
-      <div class="modal-head">
-        <h2>📖 Robo's Handbook</h2>
-        <button class="close-btn" id="bookClose" aria-label="Close">✕</button>
+  <!-- Robo's Spellbook: full-page handbook where every command acts itself out -->
+  <div class="home book-screen" id="bookScreen" hidden>
+    <div class="home-inner book-inner">
+      <button class="book-back" id="bookBack">← Back to the game</button>
+      <div class="home-hero book-hero">
+        <h1>📖 Robo's Spellbook</h1>
+        <p class="home-tag">Every word Robo knows — watch each one work its magic!</p>
       </div>
-      <div class="modal-body" id="bookBody"></div>
+      <div class="book-pages" id="bookBody"></div>
     </div>
   </div>
 

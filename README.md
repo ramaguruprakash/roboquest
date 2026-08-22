@@ -6,18 +6,24 @@ the flag 🏁. Each level introduces exactly one new idea:
 
 1. **Instructions** (levels 1–3) — programs run one line at a time: `move`, `turn`, `pickup`
 2. **Loops** (4–6) — `repeat 9:` with an indented body
-3. **Variables** (7–8) — `set steps = 7`, then use `steps` anywhere a number goes
-4. **If / else** (9–10) — `if gem here:` … `else:`
-5. **While loops** (11–12) — `while not wall ahead:`
-6. **Functions** (13–14) — `define dance:` teaches Robo a new word
-7. **Art with code** (15–20) — `drop` stamps a ⭐; win by painting the target picture exactly
-   (dotted squares on the grid), from a 3-star line up to a nested-loop square, a
-   size-agnostic picture frame drawn with `define` + `while`, and finally a full
-   **web-page wireframe** (header, menu, text, button) built with functions + variables
+3. **If / else** (7–8) — `if gem here:` … `else:`
+4. **While loops** (9–10) — `while not wall ahead:`
+5. **Functions** (11–12) — `define dance:` teaches Robo a new word
+6. **Art with code** (13–20) — `drop` stamps a ⭐ (or any character: `drop =`); win by painting
+   the target picture exactly (dotted squares show ghost hints), from a 3-star line up to a
+   nested-loop square, a size-agnostic picture frame drawn with `define` + `while`,
+   coordinates with the studio crane (`goto 4 2`, art levels only), and finally a full
+   **web-page wireframe** (header, menu, text line, two identical buttons drawn by one function)
 
-Levels use two teaching devices: **line limits** (a 9-square hallway with a 2-line limit makes
-loops the only way through) and **must-use rules** (a level that requires `set` so kids can't
-fall back on what they already know).
+Chapters can also carry **side quests** (`practice: true`) — optional bonus puzzles that unlock
+when a chapter's main levels are done. They never gate the main path, get their own 🌟 tally
+(the main ⭐ count stays at 20), and are variations for extra reps, not new lessons.
+
+Levels use three teaching devices: **line limits** (a 9-square hallway with a 2-line limit makes
+loops the only way through), **must-use rules** (a level that requires `while` so kids can't
+fall back on what they already know), and **multi-world levels** (one program must beat 2–3
+boards of different sizes — so hardcoding counts genuinely cannot win; this is what makes
+`while` honest instead of rule-enforced).
 
 ## Run it
 
@@ -41,9 +47,10 @@ move            # walk 1 square (move 3 walks 3)
 turn left       # or: turn right
 pickup          # grab the gem on this square
 drop            # stamp a star on this square (one per square)
+drop =          # stamp any single character instead
+goto 4 2        # the studio crane: jump to column 4, row 2 (art levels only)
 
-set steps = 5   # variables; math with + - * works
-repeat steps:   # loop — indent the body by 2 spaces
+repeat 4:       # loop — indent the body by 2 spaces
   move
 
 if gem here:    # conditions: gem here · wall ahead · clear ahead · at goal
@@ -77,8 +84,10 @@ Errors are friendly and kid-voiced ("Bonk! 🤕 Robo walked into a wall", typo s
 
 Add an entry to `LEVELS` in `js/levels.js`. Coordinates are `x` = column, `y` = row (0 = top-left);
 directions are `N E S W`. Win = robot on the goal (if the level has one) **and** zero gems left
-**and** the dropped stars exactly match `target` (if the level has one). Art levels use `target`
-instead of `goal`. Levels are grouped into table-of-contents chapters by id prefix (see `CHAPTERS`);
+**and** the dropped stamps exactly match `target` (if the level has one — cells are `[x, y]` for
+a star or `[x, y, char]` for a character). Art levels use `target` instead of `goal`.
+Multi-world levels use `worlds: [w1, w2, …]` instead of `world` (plus a `worldLabel` like "Cave") —
+one program must win them all, and the variants must genuinely differ (the test harness checks). Levels are grouped into table-of-contents chapters by id prefix (see `CHAPTERS`);
 the in-app handbook lives in `HANDBOOK`, both in `js/levels.js`. Give the level a `solution`
 and run `node js/test.js` — the harness checks the solution wins, fits `maxLines`, uses every
 `mustUse` word, and that nothing (robot, goal, gems) is out of bounds or inside a wall.

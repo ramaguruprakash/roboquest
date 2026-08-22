@@ -5,7 +5,8 @@
 // Statements:
 //   move            move 3
 //   turn left       turn right
-//   pickup
+//   pickup          drop            drop A
+//   goto 4 2        (art levels only — the studio crane)
 //   set name = 5    set n = n + 1
 //   repeat 4:           (indented block below)
 //   if gem here:        (optional  else:  block)
@@ -15,7 +16,7 @@
 // Conditions: gem here · wall ahead · clear ahead · at goal   (prefix with "not")
 
 const Robo = (() => {
-  const KEYWORDS = ["move", "turn", "pickup", "drop", "repeat", "set", "if", "else", "while", "define"];
+  const KEYWORDS = ["move", "turn", "pickup", "drop", "goto", "repeat", "set", "if", "else", "while", "define"];
 
   function friendly(msg, lineNo) {
     const e = new Error(msg);
@@ -110,8 +111,18 @@ const Robo = (() => {
     if (text === "turn right") return { type: "turn", dir: 1, lineNo };
     if (/^turn\b/.test(text)) throw friendly('Say "turn left" or "turn right".', lineNo);
     if (text === "pickup") return { type: "pickup", lineNo };
-    if (text === "drop") return { type: "drop", lineNo };
-    if (/^drop\b/.test(text)) throw friendly('Just write "drop" on its own line — Robo drops one star right where it stands.', lineNo);
+    if (text === "drop") return { type: "drop", char: null, lineNo };
+    if ((m = text.match(/^drop\s+(\S+)$/))) {
+      if ([...m[1]].length !== 1) {
+        throw friendly('Robo can stamp just one character at a time — like:  drop A', lineNo);
+      }
+      return { type: "drop", char: m[1], lineNo };
+    }
+    if (/^drop\b/.test(text)) throw friendly('Write "drop" alone for a star ⭐, or give it one character — like:  drop A', lineNo);
+    if ((m = text.match(/^goto\s+(\d+)\s+(\d+)$/))) {
+      return { type: "goto", x: parseInt(m[1], 10), y: parseInt(m[2], 10), lineNo };
+    }
+    if (/^goto\b/.test(text)) throw friendly("Write it like:  goto 4 2  — the column first, then the row (count from 0!).", lineNo);
     if ((m = text.match(/^set\s+([A-Za-z_]\w*)\s*=\s*(.+)$/))) {
       return { type: "set", name: m[1], expr: parseExpr(m[2], lineNo), lineNo };
     }
@@ -214,7 +225,7 @@ const Robo = (() => {
       y: world.robot.y,
       dir: world.robot.dir,
       gems: new Set((world.gems || []).map((g) => g[0] + "," + g[1])),
-      dropped: new Set(),
+      dropped: new Map(), // square key -> stamped character
     };
     const walls = new Set((world.walls || []).map((w) => w[0] + "," + w[1]));
     const steps = [];
@@ -315,10 +326,22 @@ const Robo = (() => {
           case "drop": {
             const key = state.x + "," + state.y;
             if (state.dropped.has(key)) {
-              throw friendly("There's already a star here! Robo can only drop one ⭐ per square.", st.lineNo);
+              throw friendly("This square is already stamped! Robo can only drop one thing per square.", st.lineNo);
             }
-            state.dropped.add(key);
+            state.dropped.set(key, st.char || "⭐");
             snap("drop", st.lineNo);
+            break;
+          }
+          case "goto": {
+            if (!world.target) {
+              throw friendly("The magic crane only works in the art studio! In adventure levels Robo has to walk. 🏗️", st.lineNo);
+            }
+            if (blocked(st.x, st.y)) {
+              throw friendly(`The crane can't reach column ${st.x}, row ${st.y} — that's off the board!`, st.lineNo);
+            }
+            state.x = st.x;
+            state.y = st.y;
+            snap("goto", st.lineNo);
             break;
           }
           case "set": {

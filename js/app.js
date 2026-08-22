@@ -12,9 +12,9 @@
     tocOverlay: $("tocOverlay"),
     tocBody: $("tocBody"),
     tocClose: $("tocClose"),
-    bookOverlay: $("bookOverlay"),
+    bookScreen: $("bookScreen"),
     bookBody: $("bookBody"),
-    bookClose: $("bookClose"),
+    bookBack: $("bookBack"),
     conceptBadge: $("conceptBadge"),
     levelTitle: $("levelTitle"),
     intro: $("intro"),
@@ -24,6 +24,7 @@
     commandList: $("commandList"),
     checksNote: $("checksNote"),
     board: $("board"),
+    worldTabs: $("worldTabs"),
     grid: $("grid"),
     robot: $("robot"),
     dirArrow: $("dirArrow"),
@@ -53,11 +54,16 @@
 
   let current = 0; // level index
   let animTimer = null;
+  let nextWorldTimer = null; // pause between worlds in a multi-world run
+  let viewWorld = 0; // which of the level's worlds the board shows
+  let worldStatus = []; // per world: "pending" | "running" | "pass" | "fail"
   let completed = loadProgress();
 
   function loadProgress() {
     try {
-      return new Set(JSON.parse(localStorage.getItem(PROGRESS_KEY) || "[]"));
+      const saved = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "[]");
+      // Drop ids of levels that no longer exist (the ladder evolves between visits).
+      return new Set(saved.filter((id) => LEVELS.some((lv) => lv.id === id)));
     } catch {
       return new Set();
     }
@@ -65,72 +71,272 @@
   function saveProgress() {
     localStorage.setItem(PROGRESS_KEY, JSON.stringify([...completed]));
   }
+  // The main quest is the non-practice levels; side quests (practice: true) sit off-path.
+  function mainLevels() {
+    return LEVELS.filter((lv) => !lv.practice);
+  }
+
   function isUnlocked(idx) {
-    return idx === 0 || completed.has(LEVELS[idx - 1].id);
+    const lv = LEVELS[idx];
+    if (lv.practice) {
+      // Side quests open once their chapter's main levels are all done.
+      const ch = chapterOf(lv.id);
+      return LEVELS.filter((l) => !l.practice && chapterOf(l.id) === ch)
+        .every((l) => completed.has(l.id));
+    }
+    let prev = -1;
+    for (let i = idx - 1; i >= 0; i--) {
+      if (!LEVELS[i].practice) { prev = i; break; }
+    }
+    return prev === -1 || completed.has(LEVELS[prev].id);
+  }
+
+  // Where "Next level" goes: main quest skips side quests; a side quest chains
+  // through its own pack, then ends (-1 = no next; the overlay hides the button).
+  function nextIndex(idx) {
+    const lv = LEVELS[idx];
+    const ch = chapterOf(lv.id);
+    for (let i = idx + 1; i < LEVELS.length; i++) {
+      if (!lv.practice && !LEVELS[i].practice) return i;
+      if (lv.practice && LEVELS[i].practice && chapterOf(LEVELS[i].id) === ch) return i;
+    }
+    return -1;
   }
 
   // ---------- Table of contents & handbook ----------
 
   function updateStarTally() {
-    els.starTally.textContent = `⭐ ${completed.size} / ${LEVELS.length}`;
+    const mains = mainLevels();
+    const mainDone = mains.filter((l) => completed.has(l.id)).length;
+    const questDone = LEVELS.filter((l) => l.practice && completed.has(l.id)).length;
+    els.starTally.textContent =
+      `⭐ ${mainDone} / ${mains.length}` + (questDone ? ` · 🌟 ${questDone}` : "");
   }
 
   function chapterOf(levelId) {
     return CHAPTERS.find((c) => levelId.startsWith(c.prefix + "-"));
   }
 
+  function tocRow(i, label, doneMark) {
+    const lv = LEVELS[i];
+    const done = completed.has(lv.id);
+    const unlocked = isUnlocked(i);
+    const row = document.createElement("button");
+    row.className = "toc-level" + (lv.practice ? " practice" : "");
+    if (done) row.classList.add("done");
+    if (i === current) row.classList.add("current");
+    row.disabled = !unlocked;
+    row.innerHTML =
+      `<span class="toc-mark">${done ? doneMark : unlocked ? "▶" : "🔒"}</span>` +
+      (label ? `<span class="toc-num">${label}</span> ` : "") +
+      ESC(lv.title);
+    row.title = unlocked
+      ? lv.title
+      : lv.practice
+        ? "Finish this chapter's levels to open its side quests!"
+        : "Finish the level before this one to unlock!";
+    row.addEventListener("click", () => {
+      els.tocOverlay.hidden = true;
+      loadLevel(i);
+    });
+    return row;
+  }
+
   function renderToc() {
     els.tocBody.innerHTML = "";
+    const mains = mainLevels();
     for (const chapter of CHAPTERS) {
       const idxs = LEVELS.map((lv, i) => i).filter((i) => chapterOf(LEVELS[i].id) === chapter);
       if (!idxs.length) continue;
-      const doneCount = idxs.filter((i) => completed.has(LEVELS[i].id)).length;
+      const mainIdxs = idxs.filter((i) => !LEVELS[i].practice);
+      const questIdxs = idxs.filter((i) => LEVELS[i].practice);
+      const doneCount = mainIdxs.filter((i) => completed.has(LEVELS[i].id)).length;
+      const questDone = questIdxs.filter((i) => completed.has(LEVELS[i].id)).length;
 
       const section = document.createElement("section");
       section.className = "toc-chapter";
       section.innerHTML =
         `<h3>${chapter.emoji} ${ESC(chapter.title)} ` +
-        `<span class="toc-progress">${doneCount} / ${idxs.length}</span></h3>` +
+        `<span class="toc-progress">${doneCount} / ${mainIdxs.length}` +
+        (questIdxs.length ? ` · 🌟 ${questDone} / ${questIdxs.length}` : "") +
+        `</span></h3>` +
         `<p class="toc-blurb">${ESC(chapter.blurb)}</p>`;
 
       const list = document.createElement("div");
       list.className = "toc-levels";
-      for (const i of idxs) {
-        const lv = LEVELS[i];
-        const done = completed.has(lv.id);
-        const unlocked = isUnlocked(i);
-        const row = document.createElement("button");
-        row.className = "toc-level";
-        if (done) row.classList.add("done");
-        if (i === current) row.classList.add("current");
-        row.disabled = !unlocked;
-        row.innerHTML =
-          `<span class="toc-mark">${done ? "⭐" : unlocked ? "▶" : "🔒"}</span>` +
-          `<span class="toc-num">${i + 1}.</span> ${ESC(lv.title)}`;
-        row.title = unlocked ? lv.title : "Finish the level before this one to unlock!";
-        row.addEventListener("click", () => {
-          els.tocOverlay.hidden = true;
-          loadLevel(i);
-        });
-        list.appendChild(row);
+      for (const i of mainIdxs) {
+        list.appendChild(tocRow(i, `${mains.indexOf(LEVELS[i]) + 1}.`, "⭐"));
+      }
+      if (questIdxs.length) {
+        const label = document.createElement("p");
+        label.className = "toc-quest-label";
+        label.textContent = "🌟 Side quests — just for fun!";
+        list.appendChild(label);
+        for (const i of questIdxs) list.appendChild(tocRow(i, "", "🌟"));
       }
       section.appendChild(list);
       els.tocBody.appendChild(section);
     }
   }
 
+  // ---------- Robo's Spellbook ----------
+  // A full-page handbook. Each page runs its example through the REAL interpreter
+  // in a tiny demo world and animates the steps with the active code line lit up.
+
+  const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const SPELL_ROT = { N: -90, E: 0, S: 90, W: 180 };
+  let spellDemos = []; // { root, grid, code, world, example, frames, i, timer }
+  let spellObserver = null;
+
+  function commandLearned(cmd) {
+    return LEVELS.some((lv, i) => (lv.newCommands || []).includes(cmd) && isUnlocked(i));
+  }
+  function commandChapter(cmd) {
+    const lv = LEVELS.find((l) => (l.newCommands || []).includes(cmd));
+    return lv ? chapterOf(lv.id) : null;
+  }
+
+  function spellFrameHTML(w, f) {
+    const wallSet = new Set((w.walls || []).map(([x, y]) => x + "," + y));
+    const targetMap = new Map((w.target || []).map(([x, y, ch]) => [x + "," + y, ch || "⭐"]));
+    const gemSet = new Set(f.gems);
+    const droppedMap = new Map(f.dropped);
+    let html = "";
+    for (let y = 0; y < w.rows; y++) {
+      for (let x = 0; x < w.cols; x++) {
+        const key = x + "," + y;
+        let inner = "";
+        if (wallSet.has(key)) inner = "🧱";
+        else if (droppedMap.has(key)) inner = `<span class="stamp">${ESC(droppedMap.get(key))}</span>`;
+        else if (gemSet.has(key)) inner = "💎";
+        else if (w.goal && w.goal.x === x && w.goal.y === y) inner = "🏁";
+        else if (targetMap.has(key)) inner = `<span class="ghost stamp">${ESC(targetMap.get(key))}</span>`;
+        if (f.x === x && f.y === y) {
+          inner = `🤖<span class="spell-dir" style="transform: rotate(${SPELL_ROT[f.dir]}deg)">➤</span>`;
+        }
+        html += `<div class="spell-cell">${inner}</div>`;
+      }
+    }
+    return html;
+  }
+
+  function spellCodeHTML(example, activeLine) {
+    return example
+      .split("\n")
+      .map((l, i) => `<span class="demo-line${i + 1 === activeLine ? " active" : ""}">${ESC(l) || " "}</span>`)
+      .join("");
+  }
+
+  function drawSpellFrame(d) {
+    const f = d.frames[Math.min(d.i, d.frames.length - 1)];
+    d.grid.innerHTML = spellFrameHTML(d.world, f);
+    d.code.innerHTML = spellCodeHTML(d.example, f.lineNo || null);
+  }
+
+  function startSpellDemo(d) {
+    if (d.timer || REDUCED_MOTION) return;
+    d.timer = setInterval(() => {
+      d.i = (d.i + 1) % (d.frames.length + 2); // 2 extra beats to admire the finish
+      drawSpellFrame(d);
+    }, 700);
+  }
+  function stopSpellDemo(d) {
+    if (d.timer) {
+      clearInterval(d.timer);
+      d.timer = null;
+    }
+  }
+
   function renderBook() {
+    hideBookDemos();
     els.bookBody.innerHTML = "";
+    spellObserver = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          const d = spellDemos.find((d) => d.root === e.target);
+          if (d) e.isIntersecting ? startSpellDemo(d) : stopSpellDemo(d);
+        }
+      },
+      { root: els.bookScreen, threshold: 0.25 }
+    );
+
     for (const page of HANDBOOK) {
       const sec = document.createElement("section");
-      sec.className = "book-page";
+      const learned = !page.cmd || commandLearned(page.cmd);
+      sec.className = "home-card spell-page" + (learned ? "" : " locked");
+
+      if (!learned) {
+        const ch = commandChapter(page.cmd);
+        sec.innerHTML =
+          `<h3><code>${ESC(page.syntax)}</code></h3>` +
+          `<p class="spell-tease">✨ A spell you haven't learned yet — it appears in the ` +
+          `<b>${ESC(ch ? ch.title : "?")}</b> chapter. Keep playing!</p>`;
+        els.bookBody.appendChild(sec);
+        continue;
+      }
+
       sec.innerHTML =
         `<h3><code>${ESC(page.syntax)}</code></h3>` +
-        `<p>${ESC(page.explain)}</p>` +
-        `<pre class="book-example">${ESC(page.example)}</pre>` +
-        `<p class="book-note">↳ ${ESC(page.exampleNote)}</p>`;
+        `<p>${ESC(page.explain)}</p>`;
+
+      if (page.demo) {
+        const w = page.demo;
+        const demoBox = document.createElement("div");
+        demoBox.className = "spell-demo";
+        demoBox.innerHTML =
+          `<pre class="book-example spell-code"></pre>` +
+          `<div class="spell-grid" style="grid-template-columns: repeat(${w.cols}, var(--spell-cell))"></div>`;
+        sec.appendChild(demoBox);
+
+        const initial = {
+          x: w.robot.x, y: w.robot.y, dir: w.robot.dir,
+          gems: (w.gems || []).map((g) => g[0] + "," + g[1]),
+          dropped: [], lineNo: null,
+        };
+        const result = Robo.run(Robo.parse(page.example), w);
+        const d = {
+          root: demoBox,
+          grid: demoBox.querySelector(".spell-grid"),
+          code: demoBox.querySelector(".spell-code"),
+          world: w,
+          example: page.example,
+          frames: [initial, ...result.steps],
+          i: 0,
+          timer: null,
+        };
+        // Reduced motion: show the finished picture instead of animating.
+        if (REDUCED_MOTION) d.i = d.frames.length - 1;
+        drawSpellFrame(d);
+        spellDemos.push(d);
+        spellObserver.observe(demoBox);
+      }
+
+      const note = document.createElement("p");
+      note.className = "book-note";
+      note.textContent = "↳ " + page.exampleNote;
+      sec.appendChild(note);
       els.bookBody.appendChild(sec);
     }
+  }
+
+  function hideBookDemos() {
+    for (const d of spellDemos) stopSpellDemo(d);
+    spellDemos = [];
+    if (spellObserver) {
+      spellObserver.disconnect();
+      spellObserver = null;
+    }
+  }
+
+  function showBook() {
+    renderBook(); // rebuilt each open — unlock states change as the kid plays
+    els.bookScreen.hidden = false;
+    els.bookScreen.scrollTop = 0;
+  }
+  function hideBook() {
+    els.bookScreen.hidden = true;
+    hideBookDemos();
+    els.bookBody.innerHTML = "";
   }
 
   // ---------- World rendering ----------
@@ -148,37 +354,74 @@
     return LEVELS[current];
   }
 
+  // A level has one world, or several (`worlds`) that ONE program must beat in turn.
+  function worldsOf(lv) {
+    return lv.worlds || [lv.world];
+  }
+  function world() {
+    return worldsOf(level())[viewWorld];
+  }
+  function worldName(i) {
+    return `${level().worldLabel || "World"} ${i + 1}`;
+  }
+
+  function renderWorldTabs() {
+    const ws = worldsOf(level());
+    els.worldTabs.hidden = ws.length < 2;
+    els.worldTabs.innerHTML = "";
+    if (ws.length < 2) return;
+    const MARKS = { pending: "○", running: "▶", pass: "✓", fail: "✗" };
+    ws.forEach((w, i) => {
+      const tab = document.createElement("button");
+      const status = worldStatus[i] || "pending";
+      tab.className = "world-tab " + status;
+      if (i === viewWorld) tab.classList.add("active");
+      tab.innerHTML = `<span class="tab-mark">${MARKS[status]}</span> ${ESC(worldName(i))}`;
+      tab.title = "Peek at " + worldName(i);
+      tab.addEventListener("click", () => {
+        if (animTimer || nextWorldTimer) return; // no switching mid-run
+        viewWorld = i;
+        renderWorldTabs();
+        renderInitialWorld();
+      });
+      els.worldTabs.appendChild(tab);
+    });
+  }
+
   function cellSize() {
     return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--cell"));
   }
 
   function renderGrid(gems, dropped) {
-    const w = level().world;
+    const w = world();
     const wallSet = new Set((w.walls || []).map(([x, y]) => x + "," + y));
-    const targetSet = new Set((w.target || []).map(([x, y]) => x + "," + y));
+    // Target cells are [x, y] (a star) or [x, y, char] (stamp that character).
+    const targetMap = new Map((w.target || []).map(([x, y, ch]) => [x + "," + y, ch || "⭐"]));
     const gemSet = new Set(gems);
-    const droppedSet = new Set(dropped || []);
+    const droppedMap = new Map(dropped || []);
     els.grid.style.gridTemplateColumns = `repeat(${w.cols}, var(--cell))`;
     els.grid.innerHTML = "";
     for (let y = 0; y < w.rows; y++) {
       for (let x = 0; x < w.cols; x++) {
         const cell = document.createElement("div");
         cell.className = "cell";
+        cell.title = `column ${x}, row ${y}`; // hover aid for goto's coordinates
         const key = x + "," + y;
         if (wallSet.has(key)) {
           cell.classList.add("wall");
           cell.textContent = "🧱";
-        } else if (droppedSet.has(key)) {
-          cell.classList.add(targetSet.has(key) ? "dropped" : "misplaced");
-          cell.textContent = "⭐";
+        } else if (droppedMap.has(key)) {
+          const ch = droppedMap.get(key);
+          cell.classList.add(targetMap.get(key) === ch ? "dropped" : "misplaced");
+          cell.innerHTML = `<span class="stamp">${ESC(ch)}</span>`;
         } else if (gemSet.has(key)) {
           cell.textContent = "💎";
         } else if (w.goal && w.goal.x === x && w.goal.y === y) {
           cell.classList.add("goal");
           cell.textContent = "🏁";
-        } else if (targetSet.has(key)) {
+        } else if (targetMap.has(key)) {
           cell.classList.add("target");
-          cell.innerHTML = '<span class="ghost">⭐</span>';
+          cell.innerHTML = `<span class="ghost stamp">${ESC(targetMap.get(key))}</span>`;
         }
         els.grid.appendChild(cell);
       }
@@ -192,15 +435,18 @@
   }
 
   function renderStatus(gemsLeft, totalGems, droppedCount) {
-    const w = level().world;
+    const w = world();
     const parts = [];
     if (totalGems > 0) parts.push(`💎 ${totalGems - gemsLeft} / ${totalGems} gems`);
-    if (w.target) parts.push(`⭐ ${droppedCount} / ${w.target.length} stars placed`);
+    if (w.target) {
+      const allStars = w.target.every((t) => !t[2] || t[2] === "⭐");
+      parts.push(`${allStars ? "⭐" : "🖋️"} ${droppedCount} / ${w.target.length} ${allStars ? "stars placed" : "squares stamped"}`);
+    }
     els.gemCount.textContent = parts.join("   ");
   }
 
   function renderInitialWorld() {
-    const w = level().world;
+    const w = world();
     const gems = (w.gems || []).map(([x, y]) => x + "," + y);
     renderGrid(gems, []);
     els.robot.className = "robot";
@@ -260,7 +506,9 @@
     current = idx;
     const lv = level();
     els.conceptBadge.textContent = `${lv.conceptEmoji} ${lv.concept}`;
-    els.levelTitle.textContent = `${idx + 1}. ${lv.title}`;
+    els.levelTitle.textContent = lv.practice
+      ? `🌟 ${lv.title}`
+      : `${mainLevels().indexOf(lv) + 1}. ${lv.title}`;
     els.intro.innerHTML = lv.intro;
     els.hintText.textContent = lv.hint;
     els.hintBox.open = false;
@@ -268,6 +516,9 @@
     renderCommandRef();
     els.editor.value = localStorage.getItem(CODE_KEY(lv.id)) || "";
     updateLineInfo();
+    viewWorld = 0;
+    worldStatus = worldsOf(lv).map(() => "pending");
+    renderWorldTabs();
     renderInitialWorld();
     updateStarTally();
     els.winOverlay.hidden = true;
@@ -292,6 +543,10 @@
     if (animTimer) {
       clearInterval(animTimer);
       animTimer = null;
+    }
+    if (nextWorldTimer) {
+      clearTimeout(nextWorldTimer);
+      nextWorldTimer = null;
     }
     els.runBtn.disabled = false;
   }
@@ -328,13 +583,53 @@
       return;
     }
 
-    const result = Robo.run(program, lv.world);
-    animate(result);
+    worldStatus = worldsOf(lv).map(() => "pending");
+    runWorld(program, 0);
   }
 
-  function animate(result) {
+  // Run the program on world i, animate it, then judge — and move on to world i+1.
+  function runWorld(program, i) {
+    viewWorld = i;
+    worldStatus[i] = "running";
+    renderWorldTabs();
+    const result = Robo.run(program, world());
+    animate(result, () => afterWorld(program, result));
+  }
+
+  function afterWorld(program, result) {
     const lv = level();
-    const totalGems = (lv.world.gems || []).length;
+    const ws = worldsOf(lv);
+    const multi = ws.length > 1;
+    const verdict = judge(result, world());
+
+    if (!verdict.ok) {
+      worldStatus[viewWorld] = "fail";
+      renderWorldTabs();
+      const prefix = multi && viewWorld > 0
+        ? `That worked in ${ESC(worldName(viewWorld - 1))}… but here in ${ESC(worldName(viewWorld))}: `
+        : "";
+      const reminder = multi && viewWorld === 0
+        ? ` <br><small>Remember — one program must work in ALL ${ws.length} of them!</small>`
+        : "";
+      say(prefix + verdict.msg + reminder, "sad");
+      return;
+    }
+
+    worldStatus[viewWorld] = "pass";
+    renderWorldTabs();
+    if (multi && viewWorld < ws.length - 1) {
+      say(`${ESC(worldName(viewWorld))} — done! ✓ Same program, next one… 🏃`);
+      nextWorldTimer = setTimeout(() => {
+        nextWorldTimer = null;
+        runWorld(program, viewWorld + 1);
+      }, 900);
+      return;
+    }
+    win();
+  }
+
+  function animate(result, onDone) {
+    const totalGems = (world().gems || []).length;
     renderInitialWorld();
     say("Here I go! 🏃");
     els.runBtn.disabled = true;
@@ -344,7 +639,7 @@
     const tick = () => {
       if (i >= frames.length) {
         stopAnimation();
-        finish(result, totalGems);
+        onDone();
         return;
       }
       const f = frames[i++];
@@ -354,6 +649,10 @@
         renderStatus(f.gems.length, totalGems, f.dropped.length);
       } else if (f.action === "crash") {
         els.robot.classList.add("crash");
+      } else if (f.action === "goto") {
+        els.robot.classList.remove("hop");
+        void els.robot.offsetWidth; // restart the animation for back-to-back hops
+        els.robot.classList.add("hop");
       } else if (f.action === "set" && f.say) {
         say(`📦 Remembering: <code>${ESC(f.say)}</code>`);
       }
@@ -362,56 +661,65 @@
     animTimer = setInterval(tick, Number(els.speed.value));
   }
 
-  function finish(result, totalGems) {
-    const lv = level();
+  // Did the program beat this world? Returns { ok, msg } — msg explains the miss.
+  function judge(result, w) {
     const fin = result.final;
 
     if (result.error) {
-      say(`${ESC(result.error.message)}<br><small>(line ${result.error.lineNo})</small>`, "sad");
-      return;
+      return { ok: false, msg: `${ESC(result.error.message)}<br><small>(line ${result.error.lineNo})</small>` };
     }
 
-    const atGoal = !lv.world.goal || (fin.x === lv.world.goal.x && fin.y === lv.world.goal.y);
+    const atGoal = !w.goal || (fin.x === w.goal.x && fin.y === w.goal.y);
     const allGems = fin.gems.length === 0;
-    const target = lv.world.target;
-    let pictureOk = true, misplaced = 0, missing = 0;
+    const target = w.target;
+    let misplaced = 0, wrong = 0, missing = 0;
     if (target) {
-      const targetSet = new Set(target.map(([x, y]) => x + "," + y));
-      const droppedSet = new Set(fin.dropped);
-      misplaced = fin.dropped.filter((k) => !targetSet.has(k)).length;
-      missing = target.filter(([x, y]) => !droppedSet.has(x + "," + y)).length;
-      pictureOk = misplaced === 0 && missing === 0;
+      const targetMap = new Map(target.map(([x, y, ch]) => [x + "," + y, ch || "⭐"]));
+      const droppedMap = new Map(fin.dropped);
+      misplaced = [...droppedMap.keys()].filter((k) => !targetMap.has(k)).length;
+      wrong = [...droppedMap].filter(([k, ch]) => targetMap.has(k) && targetMap.get(k) !== ch).length;
+      missing = [...targetMap.keys()].filter((k) => !droppedMap.has(k)).length;
     }
 
-    if (atGoal && allGems && pictureOk) {
-      win(totalGems);
-    } else if (target && misplaced > 0) {
-      say(`Hmm — ${misplaced} star${misplaced === 1 ? " is" : "s are"} outside the picture. Stars only go on the dotted squares!`, "sad");
-    } else if (target && missing > 0) {
-      say(`Looking good, but the picture isn't finished — ${missing} dotted square${missing === 1 ? "" : "s"} still need${missing === 1 ? "s" : ""} a star. ⭐`, "sad");
-    } else if (!atGoal) {
-      say("The program finished, but I'm not on the flag 🏁 yet. Almost there — try again!", "sad");
-    } else {
-      say(`I made it to the flag, but ${fin.gems.length} gem${fin.gems.length === 1 ? " is" : "s are"} still out there! 💎 Grab them all.`, "sad");
+    if (target && misplaced > 0) {
+      return { ok: false, msg: `Hmm — ${misplaced} stamp${misplaced === 1 ? " is" : "s are"} outside the picture. Stamps only go on the dotted squares!` };
     }
+    if (target && wrong > 0) {
+      return { ok: false, msg: `So close — ${wrong} square${wrong === 1 ? " has" : "s have"} the wrong stamp. The faded hints show what goes where!` };
+    }
+    if (target && missing > 0) {
+      return { ok: false, msg: `Looking good, but the picture isn't finished — ${missing} dotted square${missing === 1 ? "" : "s"} still need${missing === 1 ? "s" : ""} a stamp. ✨` };
+    }
+    if (!atGoal) {
+      return { ok: false, msg: "The program finished, but I'm not on the flag 🏁 yet. Almost there — try again!" };
+    }
+    if (!allGems) {
+      return { ok: false, msg: `I made it to the flag, but ${fin.gems.length} gem${fin.gems.length === 1 ? " is" : "s are"} still out there! 💎 Grab them all.` };
+    }
+    return { ok: true };
   }
 
-  function win(totalGems) {
+  function win() {
     const lv = level();
     els.robot.classList.add("celebrate");
-    say("I did it! You're a great programmer! 🎉", "happy");
+    say(worldsOf(lv).length > 1
+      ? "ONE program — and it worked in every single one! You're a great programmer! 🎉"
+      : "I did it! You're a great programmer! 🎉", "happy");
     const firstTime = !completed.has(lv.id);
     completed.add(lv.id);
     saveProgress();
     updateStarTally();
 
-    const isLast = current === LEVELS.length - 1;
-    els.winSub.textContent = isLast
+    const mains = mainLevels();
+    const isFinale = lv.id === mains[mains.length - 1].id;
+    els.winSub.textContent = isFinale
       ? "You finished EVERY level. You're officially a coder! 🏆"
-      : firstTime
-        ? `You taught Robo about ${lv.concept.toLowerCase()}!`
-        : "Solved it again — nice!";
-    els.nextBtn.hidden = isLast;
+      : lv.practice
+        ? (firstTime ? "Side quest complete! Extra adventures make extra-good coders. 🌟" : "Solved it again — nice!")
+        : firstTime
+          ? `You taught Robo about ${lv.concept.toLowerCase()}!`
+          : "Solved it again — nice!";
+    els.nextBtn.hidden = nextIndex(current) === -1;
     spawnConfetti();
     els.winOverlay.hidden = false;
     els.nextBtn.focus();
@@ -491,6 +799,8 @@
   els.runBtn.addEventListener("click", run);
   els.resetBtn.addEventListener("click", () => {
     stopAnimation();
+    worldStatus = worldsOf(level()).map(() => "pending");
+    renderWorldTabs();
     renderInitialWorld();
     say("Back to the start. Ready!");
   });
@@ -514,10 +824,14 @@
 
   els.nextBtn.addEventListener("click", () => {
     els.winOverlay.hidden = true;
-    if (current < LEVELS.length - 1) loadLevel(current + 1);
+    const next = nextIndex(current);
+    if (next !== -1) loadLevel(next);
   });
   els.replayBtn.addEventListener("click", () => {
     els.winOverlay.hidden = true;
+    viewWorld = 0;
+    worldStatus = worldsOf(level()).map(() => "pending");
+    renderWorldTabs();
     renderInitialWorld();
     say("Back to the start. Ready!");
   });
@@ -527,20 +841,15 @@
     els.tocOverlay.hidden = false;
   });
   els.tocClose.addEventListener("click", () => { els.tocOverlay.hidden = true; });
-  els.bookBtn.addEventListener("click", () => {
-    if (!els.bookBody.childElementCount) renderBook();
-    els.bookOverlay.hidden = false;
+  els.bookBtn.addEventListener("click", showBook);
+  els.bookBack.addEventListener("click", hideBook);
+  els.tocOverlay.addEventListener("click", (e) => {
+    if (e.target === els.tocOverlay) els.tocOverlay.hidden = true;
   });
-  els.bookClose.addEventListener("click", () => { els.bookOverlay.hidden = true; });
-  for (const overlay of [els.tocOverlay, els.bookOverlay]) {
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) overlay.hidden = true;
-    });
-  }
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       els.tocOverlay.hidden = true;
-      els.bookOverlay.hidden = true;
+      if (!els.bookScreen.hidden) hideBook();
     }
   });
 
@@ -554,9 +863,10 @@
 
   // ---------- Start ----------
 
-  // Resume at the first unfinished unlocked level.
+  // Resume at the first unfinished unlocked main-quest level (side quests never grab the spotlight).
   let start = 0;
   for (let i = 0; i < LEVELS.length; i++) {
+    if (LEVELS[i].practice) continue;
     if (isUnlocked(i) && !completed.has(LEVELS[i].id)) {
       start = i;
       break;
