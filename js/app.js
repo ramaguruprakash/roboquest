@@ -50,6 +50,7 @@
   };
 
   const PROGRESS_KEY = "roboquest-progress";
+  const LAST_LEVEL_KEY = "roboquest-last-level";
   const CODE_KEY = (id) => "roboquest-code-" + id;
 
   let current = 0; // level index
@@ -76,19 +77,18 @@
     return LEVELS.filter((lv) => !lv.practice);
   }
 
-  function isUnlocked(idx) {
-    const lv = LEVELS[idx];
-    if (lv.practice) {
-      // Side quests open once their chapter's main levels are all done.
-      const ch = chapterOf(lv.id);
-      return LEVELS.filter((l) => !l.practice && chapterOf(l.id) === ch)
-        .every((l) => completed.has(l.id));
-    }
-    let prev = -1;
-    for (let i = idx - 1; i >= 0; i--) {
-      if (!LEVELS[i].practice) { prev = i; break; }
-    }
-    return prev === -1 || completed.has(LEVELS[prev].id);
+  // Arenas are independent quests: each one unlocks from its own first level,
+  // counts its own stars, and numbers its own levels.
+  function arenaOf(lv) {
+    return (chapterOf(lv.id) || {}).arena || 1;
+  }
+  function arenaMains(n) {
+    return mainLevels().filter((lv) => arenaOf(lv) === n);
+  }
+
+  // Every level is open — kids explore freely; stars still track what's done.
+  function isUnlocked() {
+    return true;
   }
 
   // Where "Next level" goes: main quest skips side quests; a side quest chains
@@ -105,12 +105,14 @@
 
   // ---------- Table of contents & handbook ----------
 
+  // The tally shows the CURRENT level's arena — each arena counts its own stars.
   function updateStarTally() {
-    const mains = mainLevels();
+    const n = arenaOf(level());
+    const mains = arenaMains(n);
     const mainDone = mains.filter((l) => completed.has(l.id)).length;
-    const questDone = LEVELS.filter((l) => l.practice && completed.has(l.id)).length;
+    const questDone = LEVELS.filter((l) => l.practice && arenaOf(l) === n && completed.has(l.id)).length;
     els.starTally.textContent =
-      `⭐ ${mainDone} / ${mains.length}` + (questDone ? ` · 🌟 ${questDone}` : "");
+      `Arena ${n} · ⭐ ${mainDone} / ${mains.length}` + (questDone ? ` · 🌟 ${questDone}` : "");
   }
 
   function chapterOf(levelId) {
@@ -144,8 +146,23 @@
 
   function renderToc() {
     els.tocBody.innerHTML = "";
-    const mains = mainLevels();
-    for (const chapter of CHAPTERS) {
+    for (const arena of ARENAS) {
+      const chapters = CHAPTERS.filter((c) => (c.arena || 1) === arena.n);
+      if (!chapters.length) continue;
+      const mains = arenaMains(arena.n);
+      const done = mains.filter((l) => completed.has(l.id)).length;
+      const head = document.createElement("div");
+      head.className = "toc-arena";
+      head.innerHTML =
+        `<h2>🏟️ ${ESC(arena.title)} <span class="toc-progress">⭐ ${done} / ${mains.length}</span></h2>` +
+        `<p class="toc-blurb">${ESC(arena.blurb)}</p>`;
+      els.tocBody.appendChild(head);
+      renderTocChapters(chapters);
+    }
+  }
+
+  function renderTocChapters(chapters) {
+    for (const chapter of chapters) {
       const idxs = LEVELS.map((lv, i) => i).filter((i) => chapterOf(LEVELS[i].id) === chapter);
       if (!idxs.length) continue;
       const mainIdxs = idxs.filter((i) => !LEVELS[i].practice);
@@ -165,7 +182,8 @@
       const list = document.createElement("div");
       list.className = "toc-levels";
       for (const i of mainIdxs) {
-        list.appendChild(tocRow(i, `${mains.indexOf(LEVELS[i]) + 1}.`, "⭐"));
+        const lv = LEVELS[i];
+        list.appendChild(tocRow(i, `${arenaMains(arenaOf(lv)).indexOf(lv) + 1}.`, "⭐"));
       }
       if (questIdxs.length) {
         const label = document.createElement("p");
@@ -505,10 +523,11 @@
     stopAnimation();
     current = idx;
     const lv = level();
+    localStorage.setItem(LAST_LEVEL_KEY, lv.id);
     els.conceptBadge.textContent = `${lv.conceptEmoji} ${lv.concept}`;
     els.levelTitle.textContent = lv.practice
       ? `🌟 ${lv.title}`
-      : `${mainLevels().indexOf(lv) + 1}. ${lv.title}`;
+      : `${arenaMains(arenaOf(lv)).indexOf(lv) + 1}. ${lv.title}`;
     els.intro.innerHTML = lv.intro;
     els.hintText.textContent = lv.hint;
     els.hintBox.open = false;
@@ -690,11 +709,13 @@
     if (target && missing > 0) {
       return { ok: false, msg: `Looking good, but the picture isn't finished — ${missing} dotted square${missing === 1 ? "" : "s"} still need${missing === 1 ? "s" : ""} a stamp. ✨` };
     }
+    // Trick levels can override the miss messages with a playful nudge.
+    const failMsg = level().failMsg || {};
     if (!atGoal) {
-      return { ok: false, msg: "The program finished, but I'm not on the flag 🏁 yet. Almost there — try again!" };
+      return { ok: false, msg: failMsg.goal || "The program finished, but I'm not on the flag 🏁 yet. Almost there — try again!" };
     }
     if (!allGems) {
-      return { ok: false, msg: `I made it to the flag, but ${fin.gems.length} gem${fin.gems.length === 1 ? " is" : "s are"} still out there! 💎 Grab them all.` };
+      return { ok: false, msg: failMsg.gems || `I made it to the flag, but ${fin.gems.length} gem${fin.gems.length === 1 ? " is" : "s are"} still out there! 💎 Grab them all.` };
     }
     return { ok: true };
   }
@@ -712,9 +733,14 @@
 
     const mains = mainLevels();
     const isFinale = lv.id === mains[mains.length - 1].id;
+    const arenaN = (chapterOf(lv.id) || {}).arena || 1;
+    const arenaMains = mains.filter((l) => ((chapterOf(l.id) || {}).arena || 1) === arenaN);
+    const isArenaFinale = !lv.practice && lv.id === arenaMains[arenaMains.length - 1].id;
     els.winSub.textContent = isFinale
-      ? "You finished EVERY level. You're officially a coder! 🏆"
-      : lv.practice
+      ? "You conquered EVERY arena. You're officially a legendary coder! 🏆🐉"
+      : isArenaFinale
+        ? `ARENA ${arenaN} COMPLETE! 🏟️ A whole new arena of puzzles just opened…`
+        : lv.practice
         ? (firstTime ? "Side quest complete! Extra adventures make extra-good coders. 🌟" : "Solved it again — nice!")
         : firstTime
           ? `You taught Robo about ${lv.concept.toLowerCase()}!`
@@ -863,15 +889,26 @@
 
   // ---------- Start ----------
 
-  // Resume at the first unfinished unlocked main-quest level (side quests never grab the spotlight).
-  let start = 0;
-  for (let i = 0; i < LEVELS.length; i++) {
-    if (LEVELS[i].practice) continue;
-    if (isUnlocked(i) && !completed.has(LEVELS[i].id)) {
-      start = i;
-      break;
+  // Resume where the kid left off — and if that level is already beaten,
+  // roll forward to the next one. Fall back to the first unfinished main level.
+  let start = -1;
+  const lastIdx = LEVELS.findIndex((l) => l.id === localStorage.getItem(LAST_LEVEL_KEY));
+  if (lastIdx !== -1) {
+    start = lastIdx;
+    if (completed.has(LEVELS[lastIdx].id)) {
+      const nx = nextIndex(lastIdx);
+      if (nx !== -1 && !completed.has(LEVELS[nx].id)) start = nx;
     }
-    if (completed.has(LEVELS[i].id)) start = i;
+  }
+  if (start === -1) {
+    start = 0;
+    for (let i = 0; i < LEVELS.length; i++) {
+      if (LEVELS[i].practice) continue;
+      if (!completed.has(LEVELS[i].id)) {
+        start = i;
+        break;
+      }
+    }
   }
   loadLevel(start);
 

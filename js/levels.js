@@ -5,6 +5,12 @@
 // Directions: N, E, S, W.
 // Win = Robo stands on the flag 🏁 AND every gem 💎 is picked up.
 
+// Arenas are the big quest books; each holds several chapters.
+const ARENAS = [
+  { n: 1, title: "Arena 1 — Robo's First Quest", blurb: "Learn every spell in the book." },
+  { n: 2, title: "Arena 2 — The Puzzle Kingdom", blurb: "No new spells — bigger adventures for the spells you already know!" },
+];
+
 // Chapters group levels in the table of contents, matched by level id prefix.
 const CHAPTERS = [
   { prefix: "seq",   title: "Instructions",  emoji: "👣", blurb: "Robo does exactly what you say, one line at a time." },
@@ -13,6 +19,11 @@ const CHAPTERS = [
   { prefix: "while", title: "While Loops",   emoji: "🌀", blurb: "Keep going until something changes." },
   { prefix: "fn",    title: "Functions",     emoji: "🎓", blurb: "Teach Robo brand-new words." },
   { prefix: "draw",  title: "Art with Code", emoji: "🎨", blurb: "Programs that draw pictures!" },
+  { prefix: "maze",  title: "The Maze Caves",    emoji: "🧭", blurb: "A few tiny lines that can escape ANY cave.", arena: 2 },
+  { prefix: "nest",  title: "Loop in a Loop",    emoji: "➿", blurb: "Patterns made of patterns.", arena: 2 },
+  { prefix: "golf",  title: "The Shrink Ray",    emoji: "⚡", blurb: "Huge puzzles, teeny-tiny programs.", arena: 2 },
+  { prefix: "trick", title: "Tricks & Traps",    emoji: "😈", blurb: "Look before you code — these levels play tricks!", arena: 2 },
+  { prefix: "grand", title: "The Grand Dungeons", emoji: "🐉", blurb: "Everything you know, all at once.", arena: 2 },
 ];
 
 // Handbook pages: every command with a kid-voice explanation and a worked example.
@@ -143,6 +154,34 @@ function hrow(x1, x2, y, ch) {
   const cells = [];
   for (let x = x1; x <= x2; x++) cells.push(ch ? [x, y, ch] : [x, y]);
   return cells;
+}
+
+// Helper for maze levels: a straight run of cells from (x1,y1) to (x2,y2)
+// (horizontal or vertical, either direction).
+function seg(x1, y1, x2, y2) {
+  const cells = [];
+  const dx = Math.sign(x2 - x1), dy = Math.sign(y2 - y1);
+  let x = x1, y = y1;
+  cells.push([x, y]);
+  while (x !== x2 || y !== y2) {
+    x += dx;
+    y += dy;
+    cells.push([x, y]);
+  }
+  return cells;
+}
+
+// Helper for maze levels: walls everywhere EXCEPT the open corridor cells —
+// carving a cave out of solid rock.
+function caveWalls(cols, rows, open) {
+  const openSet = new Set(open.map(([x, y]) => x + "," + y));
+  const walls = [];
+  for (let x = 0; x < cols; x++) {
+    for (let y = 0; y < rows; y++) {
+      if (!openSet.has(x + "," + y)) walls.push([x, y]);
+    }
+  }
+  return walls;
 }
 
 // Helper for drawing levels: all border cells of a cols × rows grid.
@@ -759,6 +798,584 @@ const LEVELS = [
       "goto 6 6\n" +
       "button",
   },
+
+  // ═══════════════ ARENA 2: THE PUZZLE KINGDOM ═══════════════
+  // No new commands anywhere in this arena — every level is a bigger,
+  // trickier adventure for the spells the kid already knows.
+
+  // ---------- THE MAZE CAVES ----------
+  {
+    id: "maze-1",
+    title: "The Spiral Cave",
+    concept: "Maze magic",
+    conceptEmoji: "🧭",
+    newCommands: [],
+    intro:
+      "🏟️ Welcome to <b>ARENA 2</b>! No new spells here — you already know them ALL. " +
+      "These puzzles are bigger, twistier, and way more fun.<br><br>" +
+      "First up: a real <b>maze</b>! Here's the explorer's secret — you don't need to know the way. " +
+      "Give Robo one tiny rule: <i>if you can walk, walk; if you're blocked, turn.</i> " +
+      "Then sit back and watch Robo find the way <b>all by itself</b>. 🤯",
+    hint:
+      "Five tiny lines: while not at goal: → if clear ahead: → move → else: → turn right. " +
+      "That's it. Trust the rule!",
+    world: {
+      cols: 9, rows: 7,
+      robot: { x: 0, y: 0, dir: "E" },
+      walls: caveWalls(9, 7, [
+        ...seg(0, 0, 8, 0), ...seg(8, 1, 8, 6), ...seg(7, 6, 2, 6),
+        ...seg(2, 5, 2, 2), ...seg(3, 2, 6, 2), ...seg(6, 3, 6, 4),
+      ]),
+      gems: [],
+      goal: { x: 6, y: 4 },
+    },
+    maxLines: 5,
+    mustUse: ["while", "if"],
+    solution: "while not at goal:\n  if clear ahead:\n    move\n  else:\n    turn right",
+  },
+  {
+    id: "maze-2",
+    title: "The Shifting Caves",
+    concept: "Maze magic",
+    conceptEmoji: "🧭",
+    newCommands: [],
+    worldLabel: "Cave",
+    intro:
+      "Uh oh — this cave keeps <b>changing shape</b>! Two caves, different twists, " +
+      "gems sparkling in different spots. Your maze rule from last time still works — " +
+      "one program cracks them <b>both</b>. Just teach it to grab gems along the way. 💎",
+    hint:
+      "Same rule as The Spiral Cave, plus a gem check FIRST inside the while: " +
+      "if gem here: pickup. Then: if clear ahead: move, else: turn right.",
+    worlds: [
+      {
+        cols: 7, rows: 5,
+        robot: { x: 0, y: 0, dir: "E" },
+        walls: caveWalls(7, 5, [
+          ...seg(0, 0, 6, 0), ...seg(6, 1, 6, 4), ...seg(5, 4, 1, 4),
+          ...seg(1, 3, 1, 2), ...seg(2, 2, 4, 2),
+        ]),
+        gems: [[3, 0], [6, 3], [2, 4]],
+        goal: { x: 4, y: 2 },
+      },
+      {
+        cols: 9, rows: 6,
+        robot: { x: 0, y: 0, dir: "E" },
+        walls: caveWalls(9, 6, [
+          ...seg(0, 0, 8, 0), ...seg(8, 1, 8, 5), ...seg(7, 5, 1, 5),
+          ...seg(1, 4, 1, 2), ...seg(2, 2, 5, 2),
+        ]),
+        gems: [[5, 0], [8, 2], [4, 5], [1, 3]],
+        goal: { x: 5, y: 2 },
+      },
+    ],
+    maxLines: 7,
+    mustUse: ["while", "if"],
+    solution:
+      "while not at goal:\n  if gem here:\n    pickup\n  if clear ahead:\n    move\n  else:\n    turn right",
+  },
+  {
+    id: "maze-3",
+    title: "The Mirror Maze",
+    concept: "Maze magic",
+    conceptEmoji: "🧭",
+    newCommands: [],
+    worldLabel: "Mirror",
+    intro:
+      "A maze from the Mirror Realm 🪞 — every corridor bends the <b>other</b> way! " +
+      "If Robo keeps turning right, it just bonks in circles. " +
+      "You understand the rule now… so which one tiny word do you change?",
+    hint: "It's your maze rule — but at a dead end, Robo should turn LEFT.",
+    worlds: [
+      {
+        cols: 7, rows: 5,
+        robot: { x: 6, y: 0, dir: "W" },
+        walls: caveWalls(7, 5, [
+          ...seg(6, 0, 0, 0), ...seg(0, 1, 0, 4), ...seg(1, 4, 5, 4),
+          ...seg(5, 3, 5, 2),
+        ]),
+        gems: [[2, 0], [0, 2], [3, 4]],
+        goal: { x: 5, y: 2 },
+      },
+      {
+        cols: 9, rows: 6,
+        robot: { x: 8, y: 0, dir: "W" },
+        walls: caveWalls(9, 6, [
+          ...seg(8, 0, 0, 0), ...seg(0, 1, 0, 5), ...seg(1, 5, 7, 5),
+          ...seg(7, 4, 7, 2),
+        ]),
+        gems: [[4, 0], [0, 3], [6, 5], [7, 4]],
+        goal: { x: 7, y: 2 },
+      },
+    ],
+    maxLines: 7,
+    mustUse: ["while", "if"],
+    solution:
+      "while not at goal:\n  if gem here:\n    pickup\n  if clear ahead:\n    move\n  else:\n    turn left",
+  },
+
+  // ---------- MAZE SIDE QUEST ----------
+  {
+    id: "maze-p1",
+    title: "The Whirlpool",
+    concept: "Side quest",
+    conceptEmoji: "🌟",
+    practice: true,
+    newCommands: [],
+    intro:
+      "The biggest maze in the kingdom — a giant whirlpool of stone! 🌀 " +
+      "It looks impossible… but you know a rule that eats mazes like this for breakfast. " +
+      "Tiny program, ENORMOUS maze. Enjoy the show. 🍿",
+    hint: "The Mirror Maze rule — this whirlpool swirls to the left too. Grab gems as you spiral!",
+    world: {
+      cols: 11, rows: 9,
+      robot: { x: 10, y: 0, dir: "W" },
+      walls: caveWalls(11, 9, [
+        ...seg(10, 0, 0, 0), ...seg(0, 1, 0, 8), ...seg(1, 8, 10, 8),
+        ...seg(10, 7, 10, 2), ...seg(9, 2, 2, 2), ...seg(2, 3, 2, 6),
+        ...seg(3, 6, 8, 6), ...seg(8, 5, 8, 4),
+      ]),
+      gems: [[5, 0], [0, 4], [6, 8], [10, 3], [4, 2]],
+      goal: { x: 8, y: 4 },
+    },
+    maxLines: 7,
+    mustUse: ["while"],
+    solution:
+      "while not at goal:\n  if gem here:\n    pickup\n  if clear ahead:\n    move\n  else:\n    turn left",
+  },
+
+  // ---------- LOOP IN A LOOP ----------
+  {
+    id: "nest-1",
+    title: "The Royal Rounds",
+    concept: "Loop in a loop",
+    conceptEmoji: "➿",
+    newCommands: [],
+    worldLabel: "Round",
+    intro:
+      "The King needs a guard! 💂 March all the way around the castle walls and collect " +
+      "every gem the dragons dropped — they land in different spots every night, so check every square. " +
+      "Here's the big idea: a loop <b>inside</b> a loop. The outside loop does the 4 sides, " +
+      "the inside loop does the 7 steps of one side.",
+    hint:
+      "repeat 4: → repeat 7: (move, then if gem here: pickup) → then turn right. " +
+      "Robo marches a full square and ends right where it started!",
+    worlds: [
+      {
+        cols: 8, rows: 8,
+        robot: { x: 0, y: 0, dir: "E" },
+        walls: [
+          [2, 2], [3, 2], [4, 2], [5, 2],
+          [2, 3], [3, 3], [4, 3], [5, 3],
+          [2, 4], [3, 4], [4, 4], [5, 4],
+          [2, 5], [3, 5], [4, 5], [5, 5],
+        ],
+        gems: [[3, 0], [7, 4], [5, 7], [0, 3]],
+        goal: { x: 0, y: 0 },
+      },
+      {
+        cols: 8, rows: 8,
+        robot: { x: 0, y: 0, dir: "E" },
+        walls: [
+          [2, 2], [3, 2], [4, 2], [5, 2],
+          [2, 3], [3, 3], [4, 3], [5, 3],
+          [2, 4], [3, 4], [4, 4], [5, 4],
+          [2, 5], [3, 5], [4, 5], [5, 5],
+        ],
+        gems: [[5, 0], [7, 1], [7, 6], [2, 7], [0, 5], [0, 1]],
+        goal: { x: 0, y: 0 },
+      },
+    ],
+    maxLines: 6,
+    mustUse: ["repeat", "if"],
+    solution:
+      "repeat 4:\n  repeat 7:\n    move\n    if gem here:\n      pickup\n  turn right",
+  },
+  {
+    id: "nest-2",
+    title: "Mow the Lawn",
+    concept: "Loop in a loop",
+    conceptEmoji: "➿",
+    newCommands: [],
+    intro:
+      "The royal lawn grew <b>gem-grass</b> overnight — 20 gems! 🌱💎 " +
+      "Mow it like a real lawnmower: all the way across, step down, and come back the other way. " +
+      "Going right and coming back left are different… but <i>two rows together</i> make one pattern " +
+      "that repeats. Find that two-row pattern and loop it!",
+    hint:
+      "One time around the big loop mows TWO rows: repeat 4: (pickup, move), pickup, turn right, " +
+      "move, turn right, repeat 4: (pickup, move), pickup, turn left, move, turn left. " +
+      "Wrap all of that in repeat 2:",
+    world: {
+      cols: 5, rows: 5,
+      robot: { x: 0, y: 0, dir: "E" },
+      walls: [],
+      gems: [...hrow(0, 4, 0), ...hrow(0, 4, 1), ...hrow(0, 4, 2), ...hrow(0, 4, 3)],
+      goal: { x: 0, y: 4 },
+    },
+    maxLines: 16,
+    mustUse: ["repeat"],
+    solution:
+      "repeat 2:\n" +
+      "  repeat 4:\n    pickup\n    move\n" +
+      "  pickup\n  turn right\n  move\n  turn right\n" +
+      "  repeat 4:\n    pickup\n    move\n" +
+      "  pickup\n  turn left\n  move\n  turn left",
+  },
+  {
+    id: "nest-3",
+    title: "Stairway to the Sky",
+    concept: "Loop in a loop",
+    conceptEmoji: "➿",
+    newCommands: [],
+    intro:
+      "Remember the little staircase? ☁️ Meet its GIANT cousin! " +
+      "Each stair is <b>3 squares long</b> with a gem on every step. " +
+      "One stair = a little loop (move and grab, 3 times, then climb up). " +
+      "The whole stairway = a loop of stairs. A loop <b>inside</b> a loop — you know this dance!",
+    hint:
+      "repeat 4: → inside it: repeat 3: (move, pickup) → then turn left, move, turn right. " +
+      "Seven lines to climb to the sky.",
+    world: {
+      cols: 13, rows: 7,
+      robot: { x: 0, y: 5, dir: "E" },
+      walls: [
+        [0, 6], [1, 6], [2, 6], [3, 6],
+        [4, 5], [5, 5], [6, 5], [4, 6], [5, 6], [6, 6],
+        [7, 4], [8, 4], [9, 4], [7, 5], [8, 5], [9, 5], [7, 6], [8, 6], [9, 6],
+        [10, 3], [11, 3], [12, 3], [10, 4], [11, 4], [12, 4],
+        [10, 5], [11, 5], [12, 5], [10, 6], [11, 6], [12, 6],
+      ],
+      gems: [
+        [1, 5], [2, 5], [3, 5],
+        [4, 4], [5, 4], [6, 4],
+        [7, 3], [8, 3], [9, 3],
+        [10, 2], [11, 2], [12, 2],
+      ],
+      goal: { x: 12, y: 1 },
+    },
+    maxLines: 7,
+    mustUse: ["repeat"],
+    solution:
+      "repeat 4:\n  repeat 3:\n    move\n    pickup\n  turn left\n  move\n  turn right",
+  },
+
+  // ---------- LOOP-IN-A-LOOP SIDE QUEST ----------
+  {
+    id: "nest-p1",
+    title: "The Checkerboard",
+    concept: "Side quest",
+    conceptEmoji: "🌟",
+    practice: true,
+    newCommands: [],
+    intro:
+      "The castle needs a new floor — a fancy <b>checkerboard</b>! ⬜⬛ " +
+      "Long rows and short rows take turns, and the short rows are shifted over by one. " +
+      "Teach Robo a word for each kind of row, then let the crane hop between them. " +
+      "(Psst: <code>move 2</code> skips a square in one line.)",
+    hint:
+      "define row: drop, then repeat 3: (move 2, drop). define shortrow: drop, then repeat 2: (move 2, drop). " +
+      "Then: row, goto 1 1, shortrow, goto 0 2, row, goto 1 3, shortrow, goto 0 4, row.",
+    world: {
+      cols: 7, rows: 5,
+      robot: { x: 0, y: 0, dir: "E" },
+      walls: [], gems: [],
+      target: [
+        [0, 0], [2, 0], [4, 0], [6, 0],
+        [1, 1], [3, 1], [5, 1],
+        [0, 2], [2, 2], [4, 2], [6, 2],
+        [1, 3], [3, 3], [5, 3],
+        [0, 4], [2, 4], [4, 4], [6, 4],
+      ],
+    },
+    maxLines: 20,
+    mustUse: ["define", "goto"],
+    solution:
+      "define row:\n  drop\n  repeat 3:\n    move 2\n    drop\n" +
+      "define shortrow:\n  drop\n  repeat 2:\n    move 2\n    drop\n" +
+      "row\ngoto 1 1\nshortrow\ngoto 0 2\nrow\ngoto 1 3\nshortrow\ngoto 0 4\nrow",
+  },
+
+  // ---------- THE SHRINK RAY (code golf) ----------
+  {
+    id: "golf-1",
+    title: "One-Line Wonder",
+    concept: "Code golf",
+    conceptEmoji: "⚡",
+    newCommands: [],
+    intro:
+      "⚡ ZAP! The Shrink Ray hit your editor — only <b>ONE line</b> fits now! " +
+      "The flag is 12 whole squares away. One line?! Impossible!<br><br>" +
+      "…unless a single line can walk further than one square. 🤫 " +
+      "(The spellbook's <b>move</b> page knows the secret.)",
+    hint: "\"move\" can take a number: move 12 walks 12 squares. That's the whole program!",
+    world: {
+      cols: 13, rows: 3,
+      robot: { x: 0, y: 1, dir: "E" },
+      walls: [], gems: [],
+      goal: { x: 12, y: 1 },
+    },
+    maxLines: 1,
+    solution: "move 12",
+  },
+  {
+    id: "golf-2",
+    title: "The Gem Skipper",
+    concept: "Code golf",
+    conceptEmoji: "⚡",
+    newCommands: [],
+    intro:
+      "The Shrink Ray strikes again — <b>3 lines</b> this time! " +
+      "A gem every 4 squares, all the way down the road. " +
+      "Put your two shrink-powers together: a loop, and a <b>move</b> that jumps far. 💨",
+    hint: "Each trip is the same: move 4, then pickup. Three gems, so: repeat 3: (move 4, pickup).",
+    world: {
+      cols: 13, rows: 3,
+      robot: { x: 0, y: 1, dir: "E" },
+      walls: [],
+      gems: [[4, 1], [8, 1], [12, 1]],
+      goal: { x: 12, y: 1 },
+    },
+    maxLines: 3,
+    mustUse: ["repeat"],
+    solution: "repeat 3:\n  move 4\n  pickup",
+  },
+  {
+    id: "golf-3",
+    title: "The Four Corners",
+    concept: "Code golf",
+    conceptEmoji: "⚡",
+    newCommands: [],
+    intro:
+      "The final Shrink Ray challenge: tour the WHOLE kingdom — a gem in every corner — " +
+      "in just <b>4 lines</b>. 👑 One gem is even hiding under Robo's feet right now… " +
+      "don't panic! If your loop goes all the way around, it comes home and grabs it last. 😉",
+    hint: "One side of the kingdom = move 6, pickup, turn right. Do that 4 times with a repeat.",
+    world: {
+      cols: 7, rows: 7,
+      robot: { x: 0, y: 0, dir: "E" },
+      walls: [[2, 2], [3, 2], [4, 2], [2, 3], [3, 3], [4, 3], [2, 4], [3, 4], [4, 4]],
+      gems: [[6, 0], [6, 6], [0, 6], [0, 0]],
+      goal: { x: 0, y: 0 },
+    },
+    maxLines: 4,
+    mustUse: ["repeat"],
+    solution: "repeat 4:\n  move 6\n  pickup\n  turn right",
+  },
+
+  // ---------- TRICKS & TRAPS ----------
+  {
+    id: "trick-1",
+    title: "The Gem Beneath You",
+    concept: "Tricks",
+    conceptEmoji: "😈",
+    newCommands: [],
+    intro:
+      "A nice easy gem trail — you've done a hundred of these! Right?… <i>Right?</i> 🤔 " +
+      "Robo says something feels extra sparkly today. " +
+      "Count the gems <b>carefully</b> before you write a single line.",
+    hint: "Look at the square Robo STARTS on. Pick that gem up before you take a single step!",
+    world: {
+      cols: 8, rows: 3,
+      robot: { x: 0, y: 1, dir: "E" },
+      walls: [],
+      gems: [[0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1]],
+      goal: { x: 6, y: 1 },
+    },
+    maxLines: 6,
+    failMsg: {
+      gems: "Huh? I still hear sparkling somewhere… 💎 Look VERY closely at the square where I started. 🤭",
+    },
+    solution: "pickup\nrepeat 5:\n  move\n  pickup\nmove",
+  },
+  {
+    id: "trick-2",
+    title: "The Backwards Flag",
+    concept: "Tricks",
+    conceptEmoji: "😈",
+    newCommands: [],
+    intro:
+      "Robo marched proudly into the arena… and the flag is <b>BEHIND</b> it. 😱 " +
+      "Along with all the gems. Whoops. " +
+      "Robo can't walk backwards — but two turns the same way spin it right around!",
+    hint: "turn right, turn right — now Robo faces the flag. Then: repeat 6: (move, pickup), and finish with move 2.",
+    world: {
+      cols: 9, rows: 3,
+      robot: { x: 8, y: 1, dir: "E" },
+      walls: [],
+      gems: [[2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1]],
+      goal: { x: 0, y: 1 },
+    },
+    maxLines: 6,
+    solution: "turn right\nturn right\nrepeat 6:\n  move\n  pickup\nmove 2",
+  },
+  {
+    id: "trick-3",
+    title: "The Liar's Road",
+    concept: "Tricks",
+    conceptEmoji: "😈",
+    newCommands: [],
+    intro:
+      "Trust me: it's just a straight road to the flag. Easiest level in the arena. " +
+      "Definitely no surprises at all whatsoever. 😇<br><br>" +
+      "<small>(A programmer's most important trick: don't trust the description — read the <b>board</b>.)</small>",
+    hint:
+      "…okay FINE, there's a wall in the middle of the road. 🙄 And a gem hiding behind it! " +
+      "Hop around: move 5, turn left, move, turn right, move 2, turn right, move, pickup, turn left, move 4.",
+    world: {
+      cols: 12, rows: 3,
+      robot: { x: 0, y: 1, dir: "E" },
+      walls: [[6, 1]],
+      gems: [[7, 1]],
+      goal: { x: 11, y: 1 },
+    },
+    maxLines: 10,
+    solution:
+      "move 5\nturn left\nmove\nturn right\nmove 2\nturn right\nmove\npickup\nturn left\nmove 4",
+  },
+
+  // ---------- TRICKS SIDE QUEST ----------
+  {
+    id: "trick-p1",
+    title: "Robo's Day Off",
+    concept: "Side quest",
+    conceptEmoji: "🌟",
+    practice: true,
+    newCommands: [],
+    intro:
+      "Robo is SO tired after all those dungeons. 🥱 And look — it's already standing on the flag! " +
+      "Win this level <b>without walking a single square</b>. " +
+      "One line. Shortest level in the kingdom. Don't overthink it. 😴",
+    hint: "You just need ONE instruction that doesn't move Robo off its square. A little spin, maybe?",
+    world: {
+      cols: 5, rows: 3,
+      robot: { x: 2, y: 1, dir: "E" },
+      walls: [], gems: [],
+      goal: { x: 2, y: 1 },
+    },
+    maxLines: 1,
+    failMsg: {
+      goal: "I WAS standing on the flag when we started… why did I walk away? 🥱 Try an instruction that stays put.",
+    },
+    solution: "turn left",
+  },
+
+  // ---------- THE GRAND DUNGEONS ----------
+  {
+    id: "grand-1",
+    title: "The Mountain Range",
+    concept: "Grand quest",
+    conceptEmoji: "🐉",
+    newCommands: [],
+    intro:
+      "Two mountains, a gem on each peak. 🏔️💎 Here's the master-coder move: " +
+      "teach Robo <b>up</b> (one step up the slope) and <b>down</b> (one step down) — " +
+      "then teach it <b>mountain</b> <i>using those words inside it</i>! " +
+      "Words built out of words… that's how every real program in the world is made. " +
+      "Then just write: mountain, mountain. ⛰️⛰️",
+    hint:
+      "define up: (move, turn left, move, turn right). define down: (move, turn right, move, turn left). " +
+      "define mountain: (repeat 3: up, then pickup, then repeat 3: down). Then call mountain twice!",
+    world: {
+      cols: 13, rows: 7,
+      robot: { x: 0, y: 6, dir: "E" },
+      walls: [
+        [2, 6], [3, 6], [4, 6], [5, 6], [3, 5], [4, 5],
+        [8, 6], [9, 6], [10, 6], [11, 6], [9, 5], [10, 5],
+      ],
+      gems: [[3, 3], [9, 3]],
+      goal: { x: 12, y: 6 },
+    },
+    maxLines: 20,
+    mustUse: ["define"],
+    solution:
+      "define up:\n  move\n  turn left\n  move\n  turn right\n" +
+      "define down:\n  move\n  turn right\n  move\n  turn left\n" +
+      "define mountain:\n  repeat 3:\n    up\n  pickup\n  repeat 3:\n    down\n" +
+      "mountain\nmountain",
+  },
+  {
+    id: "grand-2",
+    title: "The Castle Builder",
+    concept: "Grand quest",
+    conceptEmoji: "🐉",
+    newCommands: [],
+    intro:
+      "Design the kingdom's new castle! 🏰 Two tall towers with pointy roofs (<code>A</code> on top, " +
+      "<code>H</code> bricks below), a strong wall of <code>=</code> between them, and a little gate: " +
+      "<code>[n]</code>. Build a tower <b>once</b> with define, then let the crane carry Robo " +
+      "to build the second one. You're the royal architect now. 📐",
+    hint:
+      "Robo starts at the top-left facing DOWN. define tower: drop A, then repeat 4: (move, drop H). " +
+      "Then: tower, goto 8 0, tower, goto 1 4, turn left — and stamp the wall: = = [ n ] = =.",
+    world: {
+      cols: 9, rows: 5,
+      robot: { x: 0, y: 0, dir: "S" },
+      walls: [], gems: [],
+      target: [
+        [0, 0, "A"], [0, 1, "H"], [0, 2, "H"], [0, 3, "H"], [0, 4, "H"],
+        [8, 0, "A"], [8, 1, "H"], [8, 2, "H"], [8, 3, "H"], [8, 4, "H"],
+        [1, 4, "="], [2, 4, "="], [3, 4, "["], [4, 4, "n"], [5, 4, "]"], [6, 4, "="], [7, 4, "="],
+      ],
+    },
+    maxLines: 25,
+    mustUse: ["define", "goto"],
+    solution:
+      "define tower:\n  drop A\n  repeat 4:\n    move\n    drop H\n" +
+      "tower\ngoto 8 0\ntower\ngoto 1 4\nturn left\n" +
+      "drop =\nmove\ndrop =\nmove\ndrop [\nmove\ndrop n\nmove\ndrop ]\nmove\ndrop =\nmove\ndrop =",
+  },
+  {
+    id: "grand-3",
+    title: "The Three Dungeons",
+    concept: "BOSS",
+    conceptEmoji: "🐉",
+    newCommands: [],
+    worldLabel: "Dungeon",
+    intro:
+      "👾 <b>THE BOSS.</b> Three dungeons Robo has never seen — twisting corridors, " +
+      "treasure rooms, dead ends. ONE program must conquer them all.<br><br>" +
+      "Real explorers know the trick: put your <b>right hand on the wall</b> and never let go — " +
+      "you'll walk the whole dungeon and find everything. For Robo that means: every step, " +
+      "first try turning right; if that's blocked, spin left until the way is clear; then move. " +
+      "Grab every gem. Reach every flag. Become a legend. 🐉",
+    hint:
+      "while not at goal: → if gem here: pickup → then: turn right → while wall ahead: turn left → move. " +
+      "Watch Robo hug the right-hand wall through every twist!",
+    worlds: [
+      {
+        cols: 7, rows: 5,
+        robot: { x: 0, y: 2, dir: "E" },
+        walls: caveWalls(7, 5, [
+          ...seg(0, 2, 6, 2), ...seg(2, 1, 2, 0), ...seg(4, 3, 4, 4),
+        ]),
+        gems: [[3, 2], [4, 4], [6, 2]],
+        goal: { x: 2, y: 0 },
+      },
+      {
+        cols: 6, rows: 5,
+        robot: { x: 0, y: 0, dir: "E" },
+        walls: caveWalls(6, 5, [
+          ...seg(0, 0, 4, 0), [2, 1], ...seg(4, 1, 4, 3), ...seg(3, 3, 0, 3),
+        ]),
+        gems: [[2, 1], [4, 2], [2, 3]],
+        goal: { x: 0, y: 3 },
+      },
+      {
+        cols: 8, rows: 6,
+        robot: { x: 0, y: 0, dir: "E" },
+        walls: caveWalls(8, 6, [
+          ...seg(0, 0, 7, 0), ...seg(7, 1, 7, 4), ...seg(6, 4, 1, 4), [3, 3],
+        ]),
+        gems: [[5, 0], [7, 2], [6, 4], [3, 3]],
+        goal: { x: 1, y: 4 },
+      },
+    ],
+    maxLines: 8,
+    mustUse: ["while"],
+    solution:
+      "while not at goal:\n  if gem here:\n    pickup\n  turn right\n  while wall ahead:\n    turn left\n  move",
+  },
 ];
 
-if (typeof module !== "undefined") module.exports = { LEVELS, COMMAND_DOCS, CHECKS_NOTE, CHAPTERS, HANDBOOK };
+if (typeof module !== "undefined") module.exports = { LEVELS, COMMAND_DOCS, CHECKS_NOTE, CHAPTERS, ARENAS, HANDBOOK };

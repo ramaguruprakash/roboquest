@@ -239,6 +239,14 @@ body {
 .modal-body { overflow-y: auto; padding: 18px 24px 24px; }
 
 /* Table of contents */
+.toc-arena { margin: 26px 0 14px; }
+.toc-arena:first-child { margin-top: 0; }
+.toc-arena h2 {
+  font-family: var(--display-font);
+  font-size: 1.3rem;
+  border-bottom: 3px solid var(--tile-line);
+  padding-bottom: 4px;
+}
 .toc-chapter { margin-bottom: 20px; }
 .toc-chapter h3 {
   font-family: var(--display-font);
