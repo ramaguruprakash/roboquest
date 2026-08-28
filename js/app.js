@@ -29,6 +29,8 @@
     robot: $("robot"),
     dirArrow: $("dirArrow"),
     gemCount: $("gemCount"),
+    packBar: $("packBar"),
+    packGems: $("packGems"),
     speech: $("speech"),
     speechText: $("speechText"),
     editor: $("editor"),
@@ -159,6 +161,10 @@
       els.tocBody.appendChild(head);
       renderTocChapters(chapters);
     }
+    // Robo's Web Studio lives below the arenas — a different place, not "Arena 4".
+    if (typeof WebStudio !== "undefined") {
+      els.tocBody.appendChild(WebStudio.tocSection(() => { els.tocOverlay.hidden = true; }));
+    }
   }
 
   function renderTocChapters(chapters) {
@@ -217,18 +223,23 @@
   function spellFrameHTML(w, f) {
     const wallSet = new Set((w.walls || []).map(([x, y]) => x + "," + y));
     const targetMap = new Map((w.target || []).map(([x, y, ch]) => [x + "," + y, ch || "⭐"]));
+    const gemColors = new Map((w.gems || []).map((g) => [g[0] + "," + g[1], g[2] || "plain"]));
+    const deliveryMap = new Map((w.deliveries || []).map(([x, y, c]) => [x + "," + y, c || null]));
     const gemSet = new Set(f.gems);
     const droppedMap = new Map(f.dropped);
+    const placedMap = new Map(f.placed || []);
     let html = "";
     for (let y = 0; y < w.rows; y++) {
       for (let x = 0; x < w.cols; x++) {
         const key = x + "," + y;
         let inner = "";
         if (wallSet.has(key)) inner = "🧱";
+        else if (placedMap.has(key)) inner = `<span class="stamp">${GEM_ICON[placedMap.get(key)]}</span>`;
         else if (droppedMap.has(key)) inner = `<span class="stamp">${ESC(droppedMap.get(key))}</span>`;
-        else if (gemSet.has(key)) inner = "💎";
+        else if (gemSet.has(key)) inner = GEM_ICON[gemColors.get(key) || "plain"];
         else if (w.goal && w.goal.x === x && w.goal.y === y) inner = "🏁";
         else if (targetMap.has(key)) inner = `<span class="ghost stamp">${ESC(targetMap.get(key))}</span>`;
+        else if (deliveryMap.has(key)) inner = `<span class="ghost stamp">${deliveryMap.get(key) ? GEM_ICON[deliveryMap.get(key)] : "📦"}</span>`;
         if (f.x === x && f.y === y) {
           inner = `🤖<span class="spell-dir" style="transform: rotate(${SPELL_ROT[f.dir]}deg)">➤</span>`;
         }
@@ -309,7 +320,7 @@
         const initial = {
           x: w.robot.x, y: w.robot.y, dir: w.robot.dir,
           gems: (w.gems || []).map((g) => g[0] + "," + g[1]),
-          dropped: [], lineNo: null,
+          dropped: [], placed: [], pack: [], lineNo: null,
         };
         const result = Robo.run(Robo.parse(page.example), w);
         const d = {
@@ -410,13 +421,20 @@
     return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--cell"));
   }
 
-  function renderGrid(gems, dropped) {
+  // Gems can be colored: [x, y, "red"]. Plain gems are 💎.
+  const GEM_ICON = { plain: "💎", red: "🔴", blue: "🔵", green: "🟢", yellow: "🟡" };
+
+  function renderGrid(gems, dropped, placed) {
     const w = world();
     const wallSet = new Set((w.walls || []).map(([x, y]) => x + "," + y));
     // Target cells are [x, y] (a star) or [x, y, char] (stamp that character).
     const targetMap = new Map((w.target || []).map(([x, y, ch]) => [x + "," + y, ch || "⭐"]));
+    const gemColors = new Map((w.gems || []).map((g) => [g[0] + "," + g[1], g[2] || "plain"]));
+    // Delivery squares want a gem: [x, y] (any gem) or [x, y, "red"] (that color).
+    const deliveryMap = new Map((w.deliveries || []).map(([x, y, c]) => [x + "," + y, c || null]));
     const gemSet = new Set(gems);
     const droppedMap = new Map(dropped || []);
+    const placedMap = new Map(placed || []);
     els.grid.style.gridTemplateColumns = `repeat(${w.cols}, var(--cell))`;
     els.grid.innerHTML = "";
     for (let y = 0; y < w.rows; y++) {
@@ -428,18 +446,28 @@
         if (wallSet.has(key)) {
           cell.classList.add("wall");
           cell.textContent = "🧱";
+        } else if (placedMap.has(key)) {
+          const color = placedMap.get(key);
+          const want = deliveryMap.get(key);
+          const good = deliveryMap.has(key) && (!want || want === color);
+          cell.classList.add(good ? "dropped" : "misplaced");
+          cell.innerHTML = `<span class="stamp">${GEM_ICON[color]}</span>`;
         } else if (droppedMap.has(key)) {
           const ch = droppedMap.get(key);
           cell.classList.add(targetMap.get(key) === ch ? "dropped" : "misplaced");
           cell.innerHTML = `<span class="stamp">${ESC(ch)}</span>`;
         } else if (gemSet.has(key)) {
-          cell.textContent = "💎";
+          cell.textContent = GEM_ICON[gemColors.get(key) || "plain"];
         } else if (w.goal && w.goal.x === x && w.goal.y === y) {
           cell.classList.add("goal");
           cell.textContent = "🏁";
         } else if (targetMap.has(key)) {
           cell.classList.add("target");
           cell.innerHTML = `<span class="ghost stamp">${ESC(targetMap.get(key))}</span>`;
+        } else if (deliveryMap.has(key)) {
+          const want = deliveryMap.get(key);
+          cell.classList.add("target");
+          cell.innerHTML = `<span class="ghost stamp">${want ? GEM_ICON[want] : ESC(level().deliverEmoji || "📦")}</span>`;
         }
         els.grid.appendChild(cell);
       }
@@ -452,7 +480,7 @@
     els.dirArrow.style.cssText = ARROW_POS[dir] + `transform: rotate(${ARROW_ROT[dir]}deg);`;
   }
 
-  function renderStatus(gemsLeft, totalGems, droppedCount) {
+  function renderStatus(gemsLeft, totalGems, droppedCount, placedCount) {
     const w = world();
     const parts = [];
     if (totalGems > 0) parts.push(`💎 ${totalGems - gemsLeft} / ${totalGems} gems`);
@@ -460,16 +488,29 @@
       const allStars = w.target.every((t) => !t[2] || t[2] === "⭐");
       parts.push(`${allStars ? "⭐" : "🖋️"} ${droppedCount} / ${w.target.length} ${allStars ? "stars placed" : "squares stamped"}`);
     }
+    if (w.deliveries) {
+      parts.push(`${level().deliverEmoji || "📦"} ${placedCount || 0} / ${w.deliveries.length} delivered`);
+    }
     els.gemCount.textContent = parts.join("   ");
+  }
+
+  // The backpack strip under the board — the kid literally watches the array grow.
+  function renderPack(pack) {
+    els.packBar.hidden = !level().showPack;
+    if (els.packBar.hidden) return;
+    els.packGems.innerHTML = pack.length
+      ? pack.map((c) => `<span class="pack-gem">${GEM_ICON[c]}</span>`).join("")
+      : `<span class="pack-empty">empty</span>`;
   }
 
   function renderInitialWorld() {
     const w = world();
     const gems = (w.gems || []).map(([x, y]) => x + "," + y);
-    renderGrid(gems, []);
+    renderGrid(gems, [], []);
     els.robot.className = "robot";
     placeRobot(w.robot.x, w.robot.y, w.robot.dir);
-    renderStatus(gems.length, gems.length, 0);
+    renderStatus(gems.length, gems.length, 0, 0);
+    renderPack([]);
   }
 
   // ---------- Speech bubble ----------
@@ -507,8 +548,10 @@
       els.commandList.appendChild(dt);
       els.commandList.appendChild(dd);
     }
-    // Show the conditions cheat-sheet once "if" is known
-    els.checksNote.innerHTML = cmds.includes("if") ? CHECKS_NOTE : "";
+    // Show the conditions cheat-sheet once "if" is known; backpack checks join in arena 3.
+    els.checksNote.innerHTML = cmds.includes("if")
+      ? CHECKS_NOTE + (arenaOf(level()) >= 3 ? "<br>" + PACK_CHECKS_NOTE : "")
+      : "";
   }
 
   function renderRules() {
@@ -663,9 +706,10 @@
       }
       const f = frames[i++];
       placeRobot(f.x, f.y, f.dir);
-      if (f.action === "pickup" || f.action === "drop") {
-        renderGrid(f.gems, f.dropped);
-        renderStatus(f.gems.length, totalGems, f.dropped.length);
+      if (f.action === "pickup" || f.action === "drop" || f.action === "dropgem") {
+        renderGrid(f.gems, f.dropped, f.placed);
+        renderStatus(f.gems.length, totalGems, f.dropped.length, f.placed.length);
+        renderPack(f.pack);
       } else if (f.action === "crash") {
         els.robot.classList.add("crash");
       } else if (f.action === "goto") {
@@ -709,12 +753,35 @@
     if (target && missing > 0) {
       return { ok: false, msg: `Looking good, but the picture isn't finished — ${missing} dotted square${missing === 1 ? "" : "s"} still need${missing === 1 ? "s" : ""} a stamp. ✨` };
     }
-    // Trick levels can override the miss messages with a playful nudge.
-    const failMsg = level().failMsg || {};
+    // Levels can override the miss messages with a playful nudge (trick levels do).
+    const lv = level();
+    const failMsg = lv.failMsg || {};
+    // Deliveries: every marked square needs a gem of the right color — and
+    // gems set down anywhere else are litter.
+    if (w.deliveries) {
+      const emoji = lv.deliverEmoji || "📦";
+      const deliveryMap = new Map(w.deliveries.map(([x, y, c]) => [x + "," + y, c || null]));
+      const placedMap = new Map(fin.placed);
+      const litter = [...placedMap.keys()].filter((k) => !deliveryMap.has(k)).length;
+      const wrongColor = [...deliveryMap].filter(([k, c]) => placedMap.has(k) && c && placedMap.get(k) !== c).length;
+      const waiting = [...deliveryMap.keys()].filter((k) => !placedMap.has(k)).length;
+      if (litter > 0) {
+        return { ok: false, msg: failMsg.deliver || `I set ${litter === 1 ? "a gem" : litter + " gems"} down where nobody needs ${litter === 1 ? "it" : "them"}! Gems only go on the ${emoji} squares.` };
+      }
+      if (wrongColor > 0) {
+        return { ok: false, msg: failMsg.deliver || `${wrongColor} spot${wrongColor === 1 ? " got" : "s got"} the wrong color gem! Remember: the LAST gem in is the FIRST one out. 🔄` };
+      }
+      if (waiting > 0) {
+        return { ok: false, msg: failMsg.deliver || `${waiting} ${emoji} square${waiting === 1 ? " is" : "s are"} still waiting for a gem!` };
+      }
+    }
+    if (lv.requirePack != null && fin.pack.length !== lv.requirePack) {
+      return { ok: false, msg: failMsg.pack || `My backpack holds ${fin.pack.length} gem${fin.pack.length === 1 ? "" : "s"} — this level needs exactly ${lv.requirePack}. 🎒` };
+    }
     if (!atGoal) {
       return { ok: false, msg: failMsg.goal || "The program finished, but I'm not on the flag 🏁 yet. Almost there — try again!" };
     }
-    if (!allGems) {
+    if (!allGems && !lv.gemsOptional) {
       return { ok: false, msg: failMsg.gems || `I made it to the flag, but ${fin.gems.length} gem${fin.gems.length === 1 ? " is" : "s are"} still out there! 💎 Grab them all.` };
     }
     return { ok: true };
@@ -884,6 +951,7 @@
     completed = new Set();
     saveProgress();
     for (const lv of LEVELS) localStorage.removeItem(CODE_KEY(lv.id));
+    if (typeof WebStudio !== "undefined") WebStudio.resetProgress();
     loadLevel(0);
   });
 

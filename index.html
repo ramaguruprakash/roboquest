@@ -90,6 +90,10 @@
           </div>
         </div>
       </div>
+      <div class="pack-bar" id="packBar" hidden>
+        <span class="pack-label">🎒 Backpack</span>
+        <span class="pack-gems" id="packGems"></span>
+      </div>
       <div class="status-row">
         <span class="gem-count" id="gemCount"></span>
       </div>
@@ -146,6 +150,63 @@
     </div>
   </div>
 
+  <!-- Robo's Web Studio: real HTML with a live preview -->
+  <div class="home studio-screen" id="studioScreen" hidden>
+    <div class="studio-inner">
+      <div class="studio-top">
+        <button class="book-back" id="studioBack">← Back to the game</button>
+        <h1 class="studio-title">🖥️ Robo's Web Studio</h1>
+        <span class="studio-tally" id="studioTally"></span>
+      </div>
+      <div class="studio-columns">
+        <aside class="studio-info">
+          <h2 id="studioLevelTitle"></h2>
+          <p class="studio-intro" id="studioIntro"></p>
+          <p class="studio-newtags" id="studioNewTagsRow">New tag: <span id="studioNewTags"></span></p>
+          <details class="hint-box" id="studioHintBox">
+            <summary>💡 Need a hint?</summary>
+            <p id="studioHintText"></p>
+          </details>
+          <div class="studio-checklist" id="studioChecklist" hidden>
+            <h3>📋 Your page needs:</h3>
+            <ul id="studioChecklistBody"></ul>
+          </div>
+        </aside>
+        <section class="studio-panes">
+          <div class="studio-pane" id="studioTargetBox">
+            <div class="pane-label">✨ Make it like this</div>
+            <iframe id="studioTarget" class="studio-frame" sandbox="allow-same-origin" title="The target page"></iframe>
+          </div>
+          <div class="studio-pane">
+            <div class="pane-label">🖥️ Your page — LIVE</div>
+            <iframe id="studioPreview" class="studio-frame" sandbox="allow-same-origin" title="Your page"></iframe>
+          </div>
+          <div class="speech" id="studioSpeech" role="status">
+            <span class="speech-robo">🤖</span>
+            <span class="speech-text" id="studioSpeechText"></span>
+          </div>
+        </section>
+        <section class="studio-editor-panel">
+          <div class="editor-head"><h2>Your HTML</h2></div>
+          <textarea id="studioEditor" class="studio-editor-area" spellcheck="false"
+            autocomplete="off" autocapitalize="off"></textarea>
+          <div class="editor-buttons">
+            <button class="run-btn" id="studioRunBtn">✨ Show Robo!</button>
+            <button class="reset-btn" id="studioResetBtn">↺ Start over</button>
+          </div>
+          <div class="studio-win" id="studioWin" hidden>
+            <h2 id="studioWinTitle"></h2>
+            <p id="studioWinSub"></p>
+            <div class="win-buttons">
+              <button id="studioWinStay" class="reset-btn">🎨 Keep tinkering</button>
+              <button id="studioWinNext" class="run-btn">Next level →</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
   <!-- Win celebration -->
   <div class="win-overlay" id="winOverlay" hidden>
     <div class="win-card">
@@ -162,6 +223,8 @@
 
   <script src="js/interpreter.js"></script>
   <script src="js/levels.js"></script>
+  <script src="js/weblevels.js"></script>
+  <script src="js/webstudio.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

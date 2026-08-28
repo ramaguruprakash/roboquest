@@ -6,6 +6,7 @@
 //   move            move 3
 //   turn left       turn right
 //   pickup          drop            drop A
+//   dropgem         (take the LAST gem out of the backpack, set it down)
 //   goto 4 2        (art levels only — the studio crane)
 //   set name = 5    set n = n + 1
 //   repeat 4:           (indented block below)
@@ -13,10 +14,11 @@
 //   while not wall ahead:
 //   define dance:       (then call it by writing:  dance)
 //
-// Conditions: gem here · wall ahead · clear ahead · at goal   (prefix with "not")
+// Conditions: gem here · wall ahead · clear ahead · at goal
+//             has 3 gems · has red gem            (prefix any with "not")
 
 const Robo = (() => {
-  const KEYWORDS = ["move", "turn", "pickup", "drop", "goto", "repeat", "set", "if", "else", "while", "define"];
+  const KEYWORDS = ["move", "turn", "pickup", "drop", "dropgem", "goto", "repeat", "set", "if", "else", "while", "define"];
 
   function friendly(msg, lineNo) {
     const e = new Error(msg);
@@ -111,6 +113,7 @@ const Robo = (() => {
     if (text === "turn right") return { type: "turn", dir: 1, lineNo };
     if (/^turn\b/.test(text)) throw friendly('Say "turn left" or "turn right".', lineNo);
     if (text === "pickup") return { type: "pickup", lineNo };
+    if (text === "dropgem") return { type: "dropgem", lineNo };
     if (text === "drop") return { type: "drop", char: null, lineNo };
     if ((m = text.match(/^drop\s+(\S+)$/))) {
       if ([...m[1]].length !== 1) {
@@ -204,13 +207,19 @@ const Robo = (() => {
       neg = !neg;
       s = s.slice(4).trim();
     }
-    if (!(s in CONDITIONS)) {
-      throw friendly(
-        `Robo can check "gem here", "wall ahead", "clear ahead" or "at goal" — not "${s}".`,
-        lineNo
-      );
+    if (s in CONDITIONS) return { kind: CONDITIONS[s], neg };
+    let m;
+    // Backpack checks: "has 3 gems" (exactly that many) · "has red gem" (any of that color)
+    if ((m = s.match(/^has\s+(\d+)\s+gems?$/))) {
+      return { kind: "hasCount", n: parseInt(m[1], 10), neg };
     }
-    return { kind: CONDITIONS[s], neg };
+    if ((m = s.match(/^has\s+(red|blue|green|yellow)\s+gem$/))) {
+      return { kind: "hasColor", color: m[1], neg };
+    }
+    throw friendly(
+      `Robo can check "gem here", "wall ahead", "clear ahead", "at goal", "has 3 gems" or "has red gem" — not "${s}".`,
+      lineNo
+    );
   }
 
   // ---------- Running ----------
@@ -226,7 +235,11 @@ const Robo = (() => {
       dir: world.robot.dir,
       gems: new Set((world.gems || []).map((g) => g[0] + "," + g[1])),
       dropped: new Map(), // square key -> stamped character
+      pack: [], // Robo's backpack: gem colors in pickup order (last in, first out)
+      placed: new Map(), // square key -> gem color set down with dropgem
     };
+    // Gems may carry a color: [x, y, "red"] — plain gems are "plain" (💎).
+    const gemColors = new Map((world.gems || []).map((g) => [g[0] + "," + g[1], g[2] || "plain"]));
     const walls = new Set((world.walls || []).map((w) => w[0] + "," + w[1]));
     const steps = [];
     const vars = {};
@@ -235,7 +248,11 @@ const Robo = (() => {
 
     function snap(action, lineNo, extra) {
       steps.push(Object.assign(
-        { action, lineNo, x: state.x, y: state.y, dir: state.dir, gems: [...state.gems], dropped: [...state.dropped] },
+        {
+          action, lineNo, x: state.x, y: state.y, dir: state.dir,
+          gems: [...state.gems], dropped: [...state.dropped],
+          pack: [...state.pack], placed: [...state.placed],
+        },
         extra || {}
       ));
     }
@@ -282,6 +299,10 @@ const Robo = (() => {
       } else if (c.kind === "clearAhead") {
         const [ax, ay] = aheadCell();
         v = !blocked(ax, ay);
+      } else if (c.kind === "hasCount") {
+        v = state.pack.length === c.n;
+      } else if (c.kind === "hasColor") {
+        v = state.pack.includes(c.color);
       } else {
         v = !!world.goal && state.x === world.goal.x && state.y === world.goal.y;
       }
@@ -320,7 +341,20 @@ const Robo = (() => {
               throw friendly("There's no gem here to pick up! Try moving to a 💎 first.", st.lineNo);
             }
             state.gems.delete(key);
+            state.pack.push(gemColors.get(key));
             snap("pickup", st.lineNo);
+            break;
+          }
+          case "dropgem": {
+            if (!state.pack.length) {
+              throw friendly("My backpack is empty — no gem to drop! Pick one up first. 🎒", st.lineNo);
+            }
+            const key = state.x + "," + state.y;
+            if (state.placed.has(key) || state.gems.has(key)) {
+              throw friendly("There's already a gem on this square! Try another spot.", st.lineNo);
+            }
+            state.placed.set(key, state.pack.pop());
+            snap("dropgem", st.lineNo);
             break;
           }
           case "drop": {
@@ -397,7 +431,11 @@ const Robo = (() => {
     return {
       steps,
       error,
-      final: { x: state.x, y: state.y, dir: state.dir, gems: [...state.gems], dropped: [...state.dropped] },
+      final: {
+        x: state.x, y: state.y, dir: state.dir,
+        gems: [...state.gems], dropped: [...state.dropped],
+        pack: [...state.pack], placed: [...state.placed],
+      },
     };
   }
 

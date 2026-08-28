@@ -662,6 +662,152 @@ body {
   min-height: 1.4em;
 }
 
+/* ---------- Robo's Web Studio ---------- */
+.studio-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 18px 22px 40px;
+}
+.studio-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.studio-title {
+  font-family: var(--display-font);
+  font-size: 1.4rem;
+  flex: 1;
+}
+.studio-tally {
+  font-family: var(--display-font);
+  background: var(--sun);
+  border: 2.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 4px 14px;
+}
+.studio-columns {
+  display: grid;
+  grid-template-columns: 290px minmax(340px, 1fr) minmax(320px, 460px);
+  gap: 18px;
+  align-items: start;
+}
+.studio-info {
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 16px;
+  padding: 16px 18px;
+}
+.studio-info h2 { font-family: var(--display-font); font-size: 1.15rem; margin-bottom: 8px; }
+.studio-intro { font-size: 0.92rem; line-height: 1.55; }
+.studio-newtags { margin-top: 10px; font-size: 0.85rem; }
+.new-tag {
+  display: inline-block;
+  background: var(--sun);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 2px 8px;
+  margin: 2px;
+  font-family: var(--code-font);
+  font-size: 0.82rem;
+}
+.studio-checklist {
+  margin-top: 14px;
+  background: var(--paper);
+  border: 2px dashed var(--tile-line);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.studio-checklist h3 { font-family: var(--display-font); font-size: 0.95rem; margin-bottom: 6px; }
+.studio-checklist ul { list-style: none; }
+.studio-checklist li { margin: 5px 0; font-size: 0.88rem; }
+.studio-checklist li.check-ok { color: #239a5c; font-weight: 600; }
+.studio-panes { display: flex; flex-direction: column; gap: 12px; }
+.studio-pane {
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 16px;
+  padding: 10px 12px 12px;
+}
+.pane-label { font-family: var(--display-font); font-size: 0.9rem; margin-bottom: 8px; }
+.studio-frame {
+  width: 100%;
+  height: 250px;
+  border: 2px solid var(--tile-line);
+  border-radius: 12px;
+  background: #fff;
+}
+#studioTargetBox .studio-frame { pointer-events: none; }
+.studio-editor-panel {
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.studio-editor-panel h2 { font-family: var(--display-font); font-size: 1.05rem; }
+.studio-editor-area {
+  font-family: var(--code-font);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  min-height: 340px;
+  resize: vertical;
+  border: 2px solid var(--tile-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--tile);
+  color: var(--ink);
+  tab-size: 2;
+}
+.studio-editor-area:focus { outline: 3px solid var(--robo); outline-offset: 1px; border-color: var(--robo); }
+.editor-buttons { display: flex; gap: 10px; }
+.studio-win {
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: 14px;
+  padding: 14px 16px;
+  text-align: center;
+}
+.studio-win h2 { font-family: var(--display-font); font-size: 1.15rem; margin-bottom: 4px; }
+.studio-win p { font-size: 0.9rem; margin-bottom: 10px; }
+@media (max-width: 1100px) {
+  .studio-columns { grid-template-columns: 1fr; }
+  .studio-editor-area { min-height: 240px; }
+}
+
+/* Robo's backpack — the kid literally watches the array grow, in order */
+.pack-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 12px;
+  padding: 6px 12px;
+  margin-top: 8px;
+}
+.pack-label {
+  font-family: var(--display-font);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.pack-gems { display: flex; gap: 4px; flex-wrap: wrap; }
+.pack-gem {
+  font-size: 1.15rem;
+  animation: pack-pop 0.25s ease-out;
+}
+.pack-empty {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+@keyframes pack-pop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
 /* Robo's speech bubble — where every message comes from */
 .speech {
   display: flex;

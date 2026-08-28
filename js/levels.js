@@ -9,6 +9,7 @@
 const ARENAS = [
   { n: 1, title: "Arena 1 — Robo's First Quest", blurb: "Learn every spell in the book." },
   { n: 2, title: "Arena 2 — The Puzzle Kingdom", blurb: "No new spells — bigger adventures for the spells you already know!" },
+  { n: 3, title: "Arena 3 — Robo's Backpack", blurb: "Magic numbers, and a backpack that remembers every gem — in order!" },
 ];
 
 // Chapters group levels in the table of contents, matched by level id prefix.
@@ -24,6 +25,9 @@ const CHAPTERS = [
   { prefix: "golf",  title: "The Shrink Ray",    emoji: "⚡", blurb: "Huge puzzles, teeny-tiny programs.", arena: 2 },
   { prefix: "trick", title: "Tricks & Traps",    emoji: "😈", blurb: "Look before you code — these levels play tricks!", arena: 2 },
   { prefix: "grand", title: "The Grand Dungeons", emoji: "🐉", blurb: "Everything you know, all at once.", arena: 2 },
+  { prefix: "var",   title: "Magic Numbers",  emoji: "🔢", blurb: "A box that holds a number — and the number can change!", arena: 3 },
+  { prefix: "pack",  title: "The Backpack",   emoji: "🎒", blurb: "Gems line up in your pack, in order. Last in, first out!", arena: 3 },
+  { prefix: "color", title: "Rainbow Magic",  emoji: "🌈", blurb: "Colored gems — and a backpack that can answer questions.", arena: 3 },
 ];
 
 // Handbook pages: every command with a kid-voice explanation and a worked example.
@@ -122,6 +126,36 @@ const HANDBOOK = [
     demo: { cols: 3, rows: 1, robot: { x: 1, y: 0, dir: "N" } },
   },
   {
+    name: "set",
+    cmd: "set",
+    syntax: "set n = 3",
+    explain:
+      "Makes a magic number box! \"set n = 3\" puts 3 in a box called n. Now n works anywhere a number goes: \"move n\", \"repeat n:\". The best trick: \"set n = n + 1\" makes the number GROW each time — that's how you make stairs that get bigger, or count things you can't see!",
+    example: "set n = 2\nmove n\nset n = n + 1\nmove n",
+    exampleNote: "Robo walks 2 squares… then n grows to 3, and Robo walks 3 more!",
+    demo: { cols: 6, rows: 1, robot: { x: 0, y: 0, dir: "E" } },
+  },
+  {
+    name: "dropgem",
+    cmd: "dropgem",
+    syntax: "dropgem",
+    explain:
+      "Takes the LAST gem out of Robo's backpack 🎒 and sets it on the square Robo is standing on. The backpack is a stack: the last gem you picked up is the first one that comes out! Drop gems on the marked squares (a hungry penguin, an altar…) — an empty backpack, or a square that already has a gem, stops the program.",
+    example: "move\npickup\nmove 2\ndropgem",
+    exampleNote: "Grab a gem, carry it 2 squares, and set it down where it's needed.",
+    demo: { cols: 5, rows: 1, robot: { x: 0, y: 0, dir: "E" }, gems: [[1, 0]], deliveries: [[3, 0]] },
+  },
+  {
+    name: "backpack checks",
+    cmd: "dropgem",
+    syntax: "has 3 gems · has red gem",
+    explain:
+      "Robo can peek inside its own backpack! \"has 3 gems\" is true when the pack holds exactly 3. \"has red gem\" is true when a red one is in there (works for red, blue, green and yellow). Put them after \"if\" or \"while\" — and \"not\" flips them, like every check.",
+    example: "move\npickup\nif has red gem:\n  move 2",
+    exampleNote: "Robo grabs a red gem, checks its pack — and marches on!",
+    demo: { cols: 5, rows: 1, robot: { x: 0, y: 0, dir: "E" }, gems: [[1, 0, "red"]] },
+  },
+  {
     name: "Robo's checks",
     cmd: "if",
     syntax: "gem here · wall ahead · clear ahead · at goal",
@@ -139,6 +173,8 @@ const COMMAND_DOCS = {
   pickup: { syntax: "pickup",                desc: "Pick up the gem 💎 on Robo's square." },
   drop:   { syntax: "drop · drop A",         desc: "Stamp Robo's square: a star ⭐, or any character — \"drop A\" stamps an A. One per square!" },
   goto:   { syntax: "goto 4 2",              desc: "The studio crane lifts Robo to column 4, row 2 — count from 0, top-left! Art levels only." },
+  dropgem: { syntax: "dropgem",              desc: "Take the LAST gem out of the backpack 🎒 and set it on Robo's square." },
+  set:    { syntax: "set n = 3",             desc: "Make a number box called n. Use it anywhere a number goes — \"set n = n + 1\" makes it grow!" },
   repeat: { syntax: "repeat 4:",             desc: "Do the indented lines under it 4 times." },
   if:     { syntax: "if gem here:",          desc: "Only do the lines under it when it's true. Add \"else:\" for otherwise." },
   while:  { syntax: "while not wall ahead:", desc: "Keep doing the lines under it as long as it's true." },
@@ -147,6 +183,9 @@ const COMMAND_DOCS = {
 
 const CHECKS_NOTE =
   "Things Robo can check: <b>gem here</b> · <b>wall ahead</b> · <b>clear ahead</b> · <b>at goal</b>. Put <b>not</b> in front to flip it.";
+
+const PACK_CHECKS_NOTE =
+  "Backpack checks: <b>has 3 gems</b> (exactly that many) · <b>has red gem</b> (red, blue, green or yellow).";
 
 // Helper for drawing levels: a horizontal run of cells from x1 to x2 on row y.
 // Optional ch: the character to stamp there (default: a star).
@@ -1376,6 +1415,396 @@ const LEVELS = [
     solution:
       "while not at goal:\n  if gem here:\n    pickup\n  turn right\n  while wall ahead:\n    turn left\n  move",
   },
+
+  // ═══════════════ ARENA 3: ROBO'S BACKPACK ═══════════════
+  // Variables (set) and the backpack — an ordered list the kid can SEE.
+  // New spells: set, dropgem, and the checks "has 3 gems" / "has red gem".
+
+  // ---------- MAGIC NUMBERS ----------
+  {
+    id: "var-1",
+    title: "The Growing Staircase",
+    concept: "Magic numbers",
+    conceptEmoji: "🔢",
+    newCommands: ["set"],
+    showPack: true,
+    intro:
+      "🏟️ Welcome to <b>ARENA 3</b>! New magic: a <b>number box</b>. " +
+      "<code>set n = 1</code> puts 1 in a box called n — and <code>move n</code> walks that many squares. " +
+      "The superpower: <code>set n = n + 1</code> makes the number <b>grow</b>!<br><br>" +
+      "These stairs get longer as they climb: 1, then 2, then 3, then 4. " +
+      "No fixed number can walk them all… but a growing one can. 🤯",
+    hint:
+      "set n = 1, then repeat 4: (move n, turn left, move, turn right, set n = n + 1). " +
+      "Each time around, n grows — and so does the stair!",
+    world: {
+      cols: 11, rows: 7,
+      robot: { x: 0, y: 6, dir: "E" },
+      walls: [
+        [2, 6], [3, 6], [4, 5], [4, 6], [5, 5], [5, 6], [6, 5], [6, 6],
+        [7, 4], [7, 5], [7, 6], [8, 4], [8, 5], [8, 6], [9, 4], [9, 5], [9, 6],
+        [10, 4], [10, 5], [10, 6],
+      ],
+      gems: [],
+      goal: { x: 10, y: 2 },
+    },
+    maxLines: 7,
+    mustUse: ["set"],
+    solution:
+      "set n = 1\nrepeat 4:\n  move n\n  turn left\n  move\n  turn right\n  set n = n + 1",
+  },
+  {
+    id: "var-2",
+    title: "The Spiral",
+    concept: "Magic numbers",
+    conceptEmoji: "🔢",
+    newCommands: [],
+    showPack: true,
+    intro:
+      "The most magical drawing in the book: a <b>spiral</b>! 🌀 " +
+      "Each arm of the spiral is one star longer than the last: 1, 2, 3, 4, 5. " +
+      "A loop draws one arm and turns — a growing number makes each arm longer. " +
+      "Five lines of stars from a number that won't sit still!",
+    hint:
+      "set n = 1, then repeat 5: (repeat n: drop + move, then turn right, then set n = n + 1). " +
+      "A loop INSIDE a loop, with a growing number. You've got all three powers!",
+    world: {
+      cols: 7, rows: 7,
+      robot: { x: 3, y: 3, dir: "N" },
+      walls: [], gems: [],
+      target: [
+        [3, 3],
+        [3, 2], [4, 2],
+        [5, 2], [5, 3], [5, 4],
+        [5, 5], [4, 5], [3, 5], [2, 5],
+        [1, 5], [1, 4], [1, 3], [1, 2], [1, 1],
+      ],
+    },
+    maxLines: 7,
+    mustUse: ["set", "repeat"],
+    solution:
+      "set n = 1\nrepeat 5:\n  repeat n:\n    drop\n    move\n  turn right\n  set n = n + 1",
+  },
+  {
+    id: "var-3",
+    title: "The Gem-Powered Rocket",
+    concept: "Magic numbers",
+    conceptEmoji: "🔢",
+    newCommands: [],
+    showPack: true,
+    worldLabel: "Launchpad",
+    intro:
+      "Robo's rocket runs on gems — <b>1 gem = 1 square of flying</b>! 🚀 " +
+      "But each launchpad has a different number of gems lying around… " +
+      "Count them as you collect: start a box at 0, and <code>set fuel = fuel + 1</code> " +
+      "for every gem. At the wall, turn left and fly up exactly <code>fuel</code> squares!",
+    hint:
+      "set fuel = 0, then while not wall ahead: (move, if gem here: pickup + set fuel = fuel + 1). " +
+      "Then: turn left, move fuel. The counting does the thinking!",
+    worlds: [
+      {
+        cols: 8, rows: 6,
+        robot: { x: 0, y: 5, dir: "E" },
+        walls: [],
+        gems: [[2, 5], [4, 5], [6, 5]],
+        goal: { x: 7, y: 2 },
+      },
+      {
+        cols: 8, rows: 6,
+        robot: { x: 0, y: 5, dir: "E" },
+        walls: [],
+        gems: [[1, 5], [2, 5], [4, 5], [5, 5], [6, 5]],
+        goal: { x: 7, y: 0 },
+      },
+    ],
+    maxLines: 8,
+    mustUse: ["set", "while"],
+    solution:
+      "set fuel = 0\nwhile not wall ahead:\n  move\n  if gem here:\n    pickup\n    set fuel = fuel + 1\nturn left\nmove fuel",
+  },
+
+  // ---------- MAGIC NUMBERS SIDE QUEST ----------
+  {
+    id: "var-p1",
+    title: "The Ski Slope",
+    concept: "Side quest",
+    conceptEmoji: "🌟",
+    practice: true,
+    newCommands: [],
+    showPack: true,
+    intro:
+      "Wheee! ⛷️ This slope is the Growing Staircase's downhill cousin — " +
+      "each run gets SHORTER: 4, then 3, then 2, then 1. " +
+      "Numbers can shrink too, you know…",
+    hint: "Just like the staircase, but: set n = 4 to start, and set n = n - 1 to shrink. Turn right and drop down after each run.",
+    world: {
+      cols: 11, rows: 5,
+      robot: { x: 0, y: 0, dir: "E" },
+      walls: [], gems: [],
+      goal: { x: 10, y: 4 },
+    },
+    maxLines: 7,
+    mustUse: ["set"],
+    solution:
+      "set n = 4\nrepeat 4:\n  move n\n  turn right\n  move\n  turn left\n  set n = n - 1",
+  },
+
+  // ---------- THE BACKPACK ----------
+  {
+    id: "pack-1",
+    title: "The Backpack",
+    concept: "The backpack",
+    conceptEmoji: "🎒",
+    newCommands: [],
+    showPack: true,
+    intro:
+      "Robo got a <b>BACKPACK</b>! 🎒 From now on, gems don't vanish when you grab them — " +
+      "they line up under the board, <b>in the order you picked them up</b>. " +
+      "Grab the red, yellow and blue gems and watch your pack fill up. " +
+      "Remember the order… it's going to matter. 😏",
+    hint: "move onto each gem and pickup — watch the backpack under the board as you go. Then walk to the flag.",
+    world: {
+      cols: 7, rows: 3,
+      robot: { x: 0, y: 1, dir: "E" },
+      walls: [],
+      gems: [[1, 1, "red"], [3, 1, "yellow"], [5, 1, "blue"]],
+      goal: { x: 6, y: 1 },
+    },
+    maxLines: 5,
+    solution: "repeat 3:\n  move\n  pickup\n  move",
+  },
+  {
+    id: "pack-2",
+    title: "Hungry Penguins",
+    concept: "The backpack",
+    conceptEmoji: "🎒",
+    newCommands: ["dropgem"],
+    showPack: true,
+    deliverEmoji: "🐧",
+    intro:
+      "Three very hungry penguins! 🐧🐧🐧 New spell: <b>dropgem</b> takes the <b>last</b> gem " +
+      "out of your backpack and sets it down on Robo's square. " +
+      "Fill your pack with the gems, then feed every penguin on the way to the flag!",
+    hint: "Grab all 3 gems first (repeat 3: move, pickup). Then each penguin is 2 squares apart: repeat 3: (move 2, dropgem). One more move to the flag!",
+    world: {
+      cols: 11, rows: 3,
+      robot: { x: 0, y: 1, dir: "E" },
+      walls: [],
+      gems: [[1, 1], [2, 1], [3, 1]],
+      deliveries: [[5, 1], [7, 1], [9, 1]],
+      goal: { x: 10, y: 1 },
+    },
+    maxLines: 7,
+    mustUse: ["dropgem"],
+    solution: "repeat 3:\n  move\n  pickup\nrepeat 3:\n  move 2\n  dropgem\nmove",
+  },
+  {
+    id: "pack-3",
+    title: "Penguin Party",
+    concept: "The backpack",
+    conceptEmoji: "🎒",
+    newCommands: [],
+    showPack: true,
+    deliverEmoji: "🐧",
+    intro:
+      "A whole penguin party — and the fish market is right next door! 🐧🎉 " +
+      "Gem, penguin, gem, penguin… in and out of the backpack it goes. " +
+      "Spot the rhythm, and one little loop feeds everyone.",
+    hint: "The rhythm is: move, pickup, move, dropgem — four penguins, so repeat 4. Then one last move to the flag.",
+    world: {
+      cols: 10, rows: 3,
+      robot: { x: 0, y: 1, dir: "E" },
+      walls: [],
+      gems: [[1, 1], [3, 1], [5, 1], [7, 1]],
+      deliveries: [[2, 1], [4, 1], [6, 1], [8, 1]],
+      goal: { x: 9, y: 1 },
+    },
+    maxLines: 6,
+    mustUse: ["repeat", "dropgem"],
+    solution: "repeat 4:\n  move\n  pickup\n  move\n  dropgem\nmove",
+  },
+  {
+    id: "pack-4",
+    title: "Exactly Three",
+    concept: "The backpack",
+    conceptEmoji: "🎒",
+    newCommands: [],
+    showPack: true,
+    worldLabel: "Bridge",
+    intro:
+      "A troll guards the bridge — and it HATES greedy robots. 🧌 " +
+      "It only lets Robo cross carrying <b>exactly 3 gems</b>. Not 2. Not 4. THREE.<br><br>" +
+      "New check: <code>has 3 gems</code> is true when the backpack holds exactly 3. " +
+      "The road is covered in gems… can Robo resist grabbing them all? 😅",
+    hint:
+      "Two whiles! First: while not has 3 gems: (move, if gem here: pickup). " +
+      "Then walk the rest without grabbing: while not wall ahead: move.",
+    worlds: [
+      {
+        cols: 11, rows: 3,
+        robot: { x: 0, y: 1, dir: "E" },
+        walls: [],
+        gems: [[1, 1], [2, 1], [4, 1], [6, 1], [7, 1], [9, 1]],
+        goal: { x: 10, y: 1 },
+      },
+      {
+        cols: 11, rows: 3,
+        robot: { x: 0, y: 1, dir: "E" },
+        walls: [],
+        gems: [[2, 1], [3, 1], [5, 1], [6, 1], [8, 1]],
+        goal: { x: 10, y: 1 },
+      },
+    ],
+    maxLines: 6,
+    mustUse: ["while"],
+    gemsOptional: true,
+    requirePack: 3,
+    failMsg: {
+      pack: "The troll counts my gems and shakes its head… it wants EXACTLY 3 in my backpack! 🧌",
+    },
+    solution:
+      "while not has 3 gems:\n  move\n  if gem here:\n    pickup\nwhile not wall ahead:\n  move",
+  },
+
+  // ---------- RAINBOW MAGIC ----------
+  {
+    id: "color-1",
+    title: "The Upside-Down Rainbow",
+    concept: "Rainbow magic",
+    conceptEmoji: "🌈",
+    newCommands: [],
+    showPack: true,
+    intro:
+      "Here's the backpack's big secret: it's a <b>stack</b> — the LAST gem in is the FIRST gem out! 🎒 " +
+      "Collect red, yellow, blue… and dropgem gives them back <b>blue, yellow, red</b>. " +
+      "Lucky for you, these rainbow altars are lined up upside-down. " +
+      "Watch the pack as you go — you'll SEE the order flip!",
+    hint:
+      "Grab all 3 (repeat 3: move, pickup). Then: move 3 to the first altar, dropgem — " +
+      "then repeat 2: (move 2, dropgem). Finish with move 2. The colors sort themselves!",
+    world: {
+      cols: 13, rows: 3,
+      robot: { x: 0, y: 1, dir: "E" },
+      walls: [],
+      gems: [[1, 1, "red"], [2, 1, "yellow"], [3, 1, "blue"]],
+      deliveries: [[6, 1, "blue"], [8, 1, "yellow"], [10, 1, "red"]],
+      goal: { x: 12, y: 1 },
+    },
+    maxLines: 9,
+    mustUse: ["dropgem"],
+    solution:
+      "repeat 3:\n  move\n  pickup\nmove 3\ndropgem\nrepeat 2:\n  move 2\n  dropgem\nmove 2",
+  },
+  {
+    id: "color-2",
+    title: "The Color Door",
+    concept: "Rainbow magic",
+    conceptEmoji: "🌈",
+    newCommands: [],
+    showPack: true,
+    worldLabel: "Vault",
+    intro:
+      "Two vault doors: the ruby vault above ⬆️, the sapphire vault below ⬇️. " +
+      "New check: <code>has red gem</code> — Robo peeks in its own backpack! " +
+      "Collect the gems in the tunnel… then let the <b>backpack decide</b> which way to turn. " +
+      "One program, and Robo picks the right vault in BOTH worlds. 🧠",
+    hint:
+      "repeat 4: (move, if gem here: pickup). Then: if has red gem: turn left, else: turn right. Then move 2.",
+    worlds: [
+      {
+        cols: 6, rows: 5,
+        robot: { x: 0, y: 2, dir: "E" },
+        walls: caveWalls(6, 5, [...seg(0, 2, 4, 2), ...seg(4, 1, 4, 0), ...seg(4, 3, 4, 4)]),
+        gems: [[1, 2, "red"], [3, 2, "blue"]],
+        goal: { x: 4, y: 0 },
+      },
+      {
+        cols: 6, rows: 5,
+        robot: { x: 0, y: 2, dir: "E" },
+        walls: caveWalls(6, 5, [...seg(0, 2, 4, 2), ...seg(4, 1, 4, 0), ...seg(4, 3, 4, 4)]),
+        gems: [[1, 2, "blue"], [3, 2, "blue"]],
+        goal: { x: 4, y: 4 },
+      },
+    ],
+    maxLines: 9,
+    mustUse: ["if", "else"],
+    solution:
+      "repeat 4:\n  move\n  if gem here:\n    pickup\nif has red gem:\n  turn left\nelse:\n  turn right\nmove 2",
+  },
+  {
+    id: "color-3",
+    title: "The Dragon Family",
+    concept: "BOSS",
+    conceptEmoji: "🐉",
+    newCommands: [],
+    showPack: true,
+    worldLabel: "Lair",
+    intro:
+      "👾 <b>THE BOSS.</b> A family of dragons waits at the bottom of the lair — " +
+      "and each one only eats gems of its <b>favorite color</b> (check their cushions!). " +
+      "Two lairs, different lengths, ONE program: sweep the tunnel for gems, " +
+      "turn at the wall, and feed every dragon on the way down. " +
+      "The backpack's last-in-first-out magic lines the colors up perfectly… if you trust it. 🐉💎",
+    hint:
+      "while not wall ahead: (move, if gem here: pickup). Then turn right, and: repeat 3: (move, dropgem). One more move to the flag!",
+    worlds: [
+      {
+        cols: 8, rows: 6,
+        robot: { x: 0, y: 1, dir: "E" },
+        walls: caveWalls(8, 6, [...seg(0, 1, 7, 1), ...seg(7, 2, 7, 5)]),
+        gems: [[2, 1, "red"], [5, 1, "yellow"], [7, 1, "blue"]],
+        deliveries: [[7, 2, "blue"], [7, 3, "yellow"], [7, 4, "red"]],
+        goal: { x: 7, y: 5 },
+      },
+      {
+        cols: 11, rows: 7,
+        robot: { x: 0, y: 1, dir: "E" },
+        walls: caveWalls(11, 7, [...seg(0, 1, 10, 1), ...seg(10, 2, 10, 5)]),
+        gems: [[3, 1, "red"], [6, 1, "yellow"], [9, 1, "blue"]],
+        deliveries: [[10, 2, "blue"], [10, 3, "yellow"], [10, 4, "red"]],
+        goal: { x: 10, y: 5 },
+      },
+    ],
+    maxLines: 9,
+    mustUse: ["while", "dropgem"],
+    solution:
+      "while not wall ahead:\n  move\n  if gem here:\n    pickup\nturn right\nrepeat 3:\n  move\n  dropgem\nmove",
+  },
+
+  // ---------- RAINBOW MAGIC SIDE QUEST ----------
+  {
+    id: "color-p1",
+    title: "The Stubborn Altars",
+    concept: "Side quest",
+    conceptEmoji: "🌟",
+    practice: true,
+    newCommands: [],
+    showPack: true,
+    intro:
+      "Uh oh. These altars want red, yellow, blue — in the SAME order as the gems on the road. " +
+      "But the backpack gives them back <i>flipped</i>! 🔄 " +
+      "The gems can't move… but nobody said you have to grab them front-to-back. " +
+      "The trickiest side quest in the kingdom. 🧠✨",
+    hint:
+      "Walk PAST the gems first (move 3 puts you on the blue one). Turn around, and collect them backwards: blue, yellow, red. " +
+      "Now the flip works FOR you — turn around again and deliver!",
+    world: {
+      cols: 10, rows: 3,
+      robot: { x: 0, y: 1, dir: "E" },
+      walls: [],
+      gems: [[1, 1, "red"], [2, 1, "yellow"], [3, 1, "blue"]],
+      deliveries: [[5, 1, "red"], [6, 1, "yellow"], [7, 1, "blue"]],
+      goal: { x: 9, y: 1 },
+    },
+    maxLines: 16,
+    mustUse: ["dropgem"],
+    failMsg: {
+      deliver: "The altars refuse the wrong colors! Remember: LAST in, FIRST out. Maybe grab the gems in a different order? 🔄",
+    },
+    solution:
+      "move 3\nturn left\nturn left\npickup\nrepeat 2:\n  move\n  pickup\n" +
+      "turn left\nturn left\nmove 4\ndropgem\nrepeat 2:\n  move\n  dropgem\nmove 2",
+  },
 ];
 
-if (typeof module !== "undefined") module.exports = { LEVELS, COMMAND_DOCS, CHECKS_NOTE, CHAPTERS, ARENAS, HANDBOOK };
+if (typeof module !== "undefined") module.exports = { LEVELS, COMMAND_DOCS, CHECKS_NOTE, PACK_CHECKS_NOTE, CHAPTERS, ARENAS, HANDBOOK };

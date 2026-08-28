@@ -4,6 +4,7 @@
 
 const Robo = require("./interpreter.js");
 const { LEVELS, HANDBOOK } = require("./levels.js");
+const { WEB_LEVELS } = require("./weblevels.js");
 
 let failures = 0;
 
@@ -55,6 +56,12 @@ for (const level of LEVELS) {
         check(inBounds(x, y), `${tag}gem (${x},${y}) out of bounds`);
         check(!wallSet.has(x + "," + y), `${tag}gem (${x},${y}) inside a wall`);
       }
+      const gemKeys = new Set((w.gems || []).map(([x, y]) => x + "," + y));
+      for (const [x, y] of w.deliveries || []) {
+        check(inBounds(x, y), `${tag}delivery (${x},${y}) out of bounds`);
+        check(!wallSet.has(x + "," + y), `${tag}delivery (${x},${y}) inside a wall`);
+        check(!gemKeys.has(x + "," + y), `${tag}delivery (${x},${y}) sits on a gem`);
+      }
       for (const [x, y] of w.walls || []) {
         check(inBounds(x, y), `${tag}wall (${x},${y}) out of bounds`);
       }
@@ -68,7 +75,24 @@ for (const level of LEVELS) {
           `${tag}robot ended at (${result.final.x},${result.final.y}), goal is (${w.goal.x},${w.goal.y})`
         );
       }
-      check(result.final.gems.length === 0, `${tag}${result.final.gems.length} gems left uncollected`);
+      if (!level.gemsOptional) {
+        check(result.final.gems.length === 0, `${tag}${result.final.gems.length} gems left uncollected`);
+      }
+      if (level.requirePack != null) {
+        check(result.final.pack.length === level.requirePack,
+          `${tag}pack holds ${result.final.pack.length} gems, level requires exactly ${level.requirePack}`);
+      }
+      // Deliveries: every marked square must get a gem of the right color,
+      // and no gem may be set down anywhere else.
+      const deliveryMap = new Map((w.deliveries || []).map(([x, y, c]) => [x + "," + y, c || null]));
+      const placedMap = new Map(result.final.placed);
+      for (const [k, c] of deliveryMap) {
+        check(placedMap.has(k), `${tag}delivery at (${k}) never got a gem`);
+        if (c) check(placedMap.get(k) === c, `${tag}delivery at (${k}) wanted ${c}, got ${placedMap.get(k)}`);
+      }
+      for (const k of placedMap.keys()) {
+        check(deliveryMap.has(k), `${tag}gem set down on non-delivery square (${k})`);
+      }
       if (w.target) {
         const want = w.target.map(([x, y, ch]) => x + "," + y + "=" + (ch || "⭐")).sort().join(";");
         const got = [...result.final.dropped].map(([k, ch]) => k + "=" + ch).sort().join(";");
@@ -114,6 +138,22 @@ expectError("goto 2", artWorld, "column first", "goto with one number");
   check(!r.error && d.get("0,0") === "=" && d.get("1,0") === "⭐", "drop stamps characters (star by default)");
 }
 
+// Backpack mechanics
+const packWorld = { cols: 6, rows: 1, robot: { x: 0, y: 0, dir: "E" }, walls: [], gems: [[1, 0, "red"], [2, 0]], deliveries: [[4, 0]], goal: { x: 5, y: 0 } };
+expectError("dropgem", packWorld, "backpack is empty", "dropgem with empty pack");
+expectError("move\npickup\nmove\ndropgem", packWorld, "already a gem", "dropgem onto a wild gem");
+expectError("if has purple gem:\n  move", packWorld, "has red gem", "unknown color in check");
+{
+  const r = Robo.run(Robo.parse("move\npickup\nmove\npickup\nmove 2\ndropgem"), packWorld);
+  const placed = new Map(r.final.placed);
+  check(!r.error && r.final.pack.join(",") === "red" && placed.get("4,0") === "plain",
+    "pack is last-in-first-out (plain gem pops before red)");
+}
+{
+  const r = Robo.run(Robo.parse("move\npickup\nif has 1 gem:\n  if has red gem:\n    move 4"), packWorld);
+  check(!r.error && r.final.x === 5, "has-count and has-color checks");
+}
+
 // Spellbook demos: every handbook example must run clean in its demo world
 console.log("handbook demos");
 for (const page of HANDBOOK) {
@@ -126,6 +166,26 @@ for (const page of HANDBOOK) {
   } catch (e) {
     failures++;
     console.log(`  ❌ handbook "${page.name}" threw: ${e.message}`);
+  }
+}
+
+// Web Studio levels: structural sanity here (no DOM in node) — the checks
+// themselves are verified against a real browser by the studio smoke script.
+console.log("web studio levels");
+{
+  const ids = new Set();
+  for (const lv of WEB_LEVELS) {
+    check(!ids.has(lv.id), `web level duplicate id ${lv.id}`);
+    ids.add(lv.id);
+    for (const field of ["title", "intro", "hint", "starter", "solution"]) {
+      check(typeof lv[field] === "string" && lv[field].length > 0, `${lv.id}: missing ${field}`);
+    }
+    check(Array.isArray(lv.checks) && lv.checks.length > 0, `${lv.id}: no checks`);
+    for (const c of lv.checks || []) {
+      check(typeof c.find === "string" && typeof c.miss === "string" && typeof c.label === "string",
+        `${lv.id}: check missing find/miss/label`);
+    }
+    check(lv.solution !== lv.starter, `${lv.id}: solution is identical to starter`);
   }
 }
 
