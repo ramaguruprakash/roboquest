@@ -18,7 +18,7 @@
 const Guru = (() => {
   // Where the proxy lives. Empty until you deploy proxy/ to Vercel, then e.g.
   //   "https://roboquest-guru.vercel.app/api/guru"
-  const DEFAULT_ENDPOINT = "";
+  const DEFAULT_ENDPOINT = "https://roboquest-guru.vercel.app/api/guru";
   // For local testing: open the game once as  ?guru=http://localhost:3000/api/guru
   // and it remembers that endpoint (see proxy/dev.js). Clear with  ?guru=reset
   const GURU_ENDPOINT = resolveEndpoint();
