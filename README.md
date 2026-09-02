@@ -38,7 +38,21 @@ python3 -m http.server 8000
 (Opening `index.html` directly also works.)
 
 Progress (⭐ per level) and each level's code are saved in the browser's localStorage.
-Levels unlock in order; "Start over" in the header wipes everything.
+Every level is open from the start; "Start over" in the header wipes everything.
+
+## Dronacharya, the AI teacher 🧙
+
+Every level has an **Ask Dronacharya** button. The guru reads the level, the kid's program, and
+what actually happened when it ran (crashed into a wall on line 3, ended two squares from the
+flag, walked over a gem without `pickup`…) and replies with a *question or a nudge, never the
+answer*. Ask again about the same problem and the nudges get more concrete. The level's direct
+hint is still there behind the small **💡 Hint** button, one deliberate click deeper.
+
+The brain is Claude, reached through a tiny proxy in [`proxy/`](proxy/README.md) so this static
+page never holds an API key. The kid signs in once with a first name and a **password from a
+grown-up**; the proxy checks the password, rate-limits, and holds the prompt. Deploy the proxy to
+Vercel, then paste its URL into `GURU_ENDPOINT` at the top of `js/guru.js`. Without a proxy or
+password the guru says so and points at the hint button.
 
 ## The Robo language
 
@@ -78,6 +92,9 @@ Errors are friendly and kid-voiced ("Bonk! 🤕 Robo walked into a wall", typo s
 | `js/interpreter.js` | Robo language: parser + interpreter, no dependencies |
 | `js/levels.js` | All level data — world grids, intros, hints, rules, reference solutions |
 | `js/app.js` | UI: rendering, animation, progress, speech bubble |
+| `js/guru.js` | Dronacharya: the chat drawer, sign-in, and the plain-English run report sent to the proxy |
+| `proxy/api/guru.js` | Vercel edge function: password check, rate limit, the guru's system prompt, the Claude call |
+| `js/weblevels.js` / `js/webstudio.js` | Robo's Web Studio — HTML levels with a live preview |
 | `js/test.js` | `node js/test.js` — verifies every level's solution wins and obeys its own rules |
 
 ## Adding a level

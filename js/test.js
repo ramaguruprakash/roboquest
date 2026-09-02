@@ -189,5 +189,41 @@ console.log("web studio levels");
   }
 }
 
+// Dronacharya: the plain-English report the guru sends to Claude must describe
+// what the kid's program actually did — precisely, with no false alarms.
+console.log("guru report");
+{
+  const Guru = require("./guru.js");
+  const byId = (id) => LEVELS.find((l) => l.id === id);
+  const rep = (id, code) => Guru.reportRobo(byId(id), code);
+
+  check(rep("seq-1", "") === "The program is empty.", "empty program report");
+  check(/WON/.test(rep("seq-1", "move\nmove\nmove")) && /WOULD WIN/.test(rep("seq-1", "move\nmove\nmove")), "winning program is reported as a win");
+  check(/column 2, row 1 facing E.*flag is at column 3, row 1/.test(rep("seq-1", "move\nmove")), "not-at-goal report gives Robo's spot and the flag");
+  check(/crashed at line 5.*Bonk/.test(rep("seq-1", "move\nmove\nmove\nmove\nmove")), "wall crash report names the line");
+  check(/Does not parse — line 1.*colon/.test(rep("loop-1", "repeat 9\n  move")), "parse error report names line and message");
+  check(/OVER the limit/.test(rep("loop-1", "move\n".repeat(9))), "line-limit report");
+  check(/Missing required word\(s\): while/.test(rep("while-1", "repeat 4:\n  move")), "must-use report");
+  {
+    const r = rep("while-1", "repeat 4:\n  move");
+    check(/Hallway 1: WON/.test(r) && /Hallway 2: not solved/.test(r), "multi-world report shows which worlds pass and fail");
+  }
+  {
+    const r = rep("seq-3", "move\nmove\nmove\nmove");
+    check(/2 gem\(s\) left/.test(r) && /walked over a gem/.test(r), "gems-left report notices Robo walked over a gem");
+  }
+  check(/2 picture square\(s\) still unstamped/.test(rep("draw-1", "drop")), "picture report counts unstamped squares");
+  for (const lv of LEVELS) {
+    check(/WOULD WIN/.test(Guru.reportRobo(lv, lv.solution)), `${lv.id}: guru report calls the reference solution a win`);
+    for (const [i, w] of (lv.worlds || [lv.world]).entries()) {
+      check(Guru.describeWorld(w, i, lv).length > 20, `${lv.id}: world ${i + 1} description`);
+    }
+  }
+  const web = Guru.reportWeb(WEB_LEVELS[2], WEB_LEVELS[2].starter, [{ label: "A headline", ok: true }, { label: "Two paragraphs", ok: false }]);
+  check(/<h1>: 1 opener\(s\) but 0 closer\(s\)/.test(web) && /✗ Two paragraphs/.test(web), "web report spots the unclosed h1 and failing check");
+  const ctx = Guru.buildContext({ kind: "robo", level: byId("loop-1"), code: "move", knownCommands: ["move", "turn"], attempts: 2 });
+  check(ctx.level.solution === byId("loop-1").solution && !/<[a-z]/.test(ctx.level.intro), "context carries the solution and strips HTML from the intro");
+}
+
 console.log(failures === 0 ? "\n✅ All levels and checks passed" : `\n❌ ${failures} failure(s)`);
 process.exit(failures === 0 ? 0 : 1);

@@ -67,10 +67,16 @@
       <h1 id="levelTitle"></h1>
       <p class="intro" id="intro"></p>
       <div class="rules" id="rules"></div>
-      <details class="hint-box" id="hintBox">
-        <summary>💡 Need a hint?</summary>
-        <p id="hintText"></p>
-      </details>
+      <div class="help-row">
+        <button class="guru-btn" id="guruBtn"><img src="img/guru.svg" alt="">Ask Dronacharya</button>
+        <button class="hint-btn" id="hintBtn" title="Show this level's hint">💡 Hint</button>
+      </div>
+      <div class="hint-box" id="hintBox" hidden>
+        <p class="hint-nudge" id="hintNudge">Want a nudge first? A good question beats an answer.
+          <button class="hint-mini" id="hintAskGuru">🧙 Ask Dronacharya</button>
+          <button class="hint-mini" id="hintReveal">👀 Show the hint</button></p>
+        <p id="hintText" hidden></p>
+      </div>
       <div class="command-ref">
         <h2>Robo's words</h2>
         <dl id="commandList"></dl>
@@ -163,10 +169,16 @@
           <h2 id="studioLevelTitle"></h2>
           <p class="studio-intro" id="studioIntro"></p>
           <p class="studio-newtags" id="studioNewTagsRow">New tag: <span id="studioNewTags"></span></p>
-          <details class="hint-box" id="studioHintBox">
-            <summary>💡 Need a hint?</summary>
-            <p id="studioHintText"></p>
-          </details>
+          <div class="help-row">
+            <button class="guru-btn" id="studioGuruBtn"><img src="img/guru.svg" alt="">Ask Dronacharya</button>
+            <button class="hint-btn" id="studioHintBtn" title="Show this level's hint">💡 Hint</button>
+          </div>
+          <div class="hint-box" id="studioHintBox" hidden>
+            <p class="hint-nudge" id="studioHintNudge">Want a nudge first? A good question beats an answer.
+              <button class="hint-mini" id="studioHintAskGuru">🧙 Ask Dronacharya</button>
+              <button class="hint-mini" id="studioHintReveal">👀 Show the hint</button></p>
+            <p id="studioHintText" hidden></p>
+          </div>
           <div class="studio-checklist" id="studioChecklist" hidden>
             <h3>📋 Your page needs:</h3>
             <ul id="studioChecklistBody"></ul>
@@ -224,6 +236,7 @@
   <script src="js/interpreter.js"></script>
   <script src="js/levels.js"></script>
   <script src="js/weblevels.js"></script>
+  <script src="js/guru.js"></script>
   <script src="js/webstudio.js"></script>
   <script src="js/app.js"></script>
 </body>

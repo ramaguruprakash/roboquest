@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Dronacharya: a kid-friendly guru. Same toybox look as Robo — navy outlines, flat colors. -->
+  <!-- bow slung on the back (the archery teacher!) -->
+  <path d="M96 30 Q118 62 96 96" fill="none" stroke="#a86b2d" stroke-width="5" stroke-linecap="round"/>
+  <line x1="96" y1="30" x2="96" y2="96" stroke="#33305a" stroke-width="2.5"/>
+  <!-- robe -->
+  <path d="M22 118 Q24 84 60 82 Q96 84 98 118 Z" fill="#ff9f43" stroke="#33305a" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M60 84 L60 118" stroke="#e67e22" stroke-width="4"/>
+  <!-- topknot -->
+  <circle cx="60" cy="14" r="9" fill="#f5f5f5" stroke="#33305a" stroke-width="4"/>
+  <!-- headband -->
+  <path d="M28 34 Q60 22 92 34" fill="none" stroke="#c0392b" stroke-width="7" stroke-linecap="round"/>
+  <!-- face -->
+  <ellipse cx="60" cy="54" rx="30" ry="27" fill="#e8b07f" stroke="#33305a" stroke-width="5"/>
+  <!-- beard -->
+  <path d="M32 58 Q28 96 60 100 Q92 96 88 58 Q74 74 60 70 Q46 74 32 58 Z" fill="#f5f5f5" stroke="#33305a" stroke-width="5" stroke-linejoin="round"/>
+  <!-- mustache -->
+  <path d="M44 64 Q60 74 76 64" fill="none" stroke="#f5f5f5" stroke-width="7" stroke-linecap="round"/>
+  <path d="M44 64 Q60 74 76 64" fill="none" stroke="#33305a" stroke-width="2"/>
+  <!-- glasses -->
+  <circle cx="47" cy="50" r="8.5" fill="#fff" stroke="#33305a" stroke-width="4"/>
+  <circle cx="73" cy="50" r="8.5" fill="#fff" stroke="#33305a" stroke-width="4"/>
+  <line x1="55.5" y1="50" x2="64.5" y2="50" stroke="#33305a" stroke-width="4"/>
+  <!-- eyes (wise, twinkly) -->
+  <circle cx="48" cy="51" r="3.5" fill="#33305a"/>
+  <circle cx="74" cy="51" r="3.5" fill="#33305a"/>
+  <circle cx="49.5" cy="49.5" r="1.2" fill="#fff"/>
+  <circle cx="75.5" cy="49.5" r="1.2" fill="#fff"/>
+  <!-- eyebrows -->
+  <path d="M39 40 Q47 36 54 40" fill="none" stroke="#f5f5f5" stroke-width="4" stroke-linecap="round"/>
+  <path d="M66 40 Q73 36 81 40" fill="none" stroke="#f5f5f5" stroke-width="4" stroke-linecap="round"/>
+  <!-- tilak -->
+  <path d="M60 30 L57 39 L63 39 Z" fill="#c0392b"/>
+</svg>

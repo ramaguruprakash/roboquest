@@ -21,6 +21,11 @@
     rules: $("rules"),
     hintBox: $("hintBox"),
     hintText: $("hintText"),
+    hintNudge: $("hintNudge"),
+    hintReveal: $("hintReveal"),
+    hintAskGuru: $("hintAskGuru"),
+    hintBtn: $("hintBtn"),
+    guruBtn: $("guruBtn"),
     commandList: $("commandList"),
     checksNote: $("checksNote"),
     board: $("board"),
@@ -61,6 +66,7 @@
   let viewWorld = 0; // which of the level's worlds the board shows
   let worldStatus = []; // per world: "pending" | "running" | "pass" | "fail"
   let completed = loadProgress();
+  const attempts = {}; // level id -> how many times ▶ Run was pressed this visit (the guru reads it)
 
   function loadProgress() {
     try {
@@ -517,8 +523,54 @@
 
   function say(text, mood) {
     els.speech.className = "speech" + (mood ? " " + mood : "");
-    els.speechText.innerHTML = text;
+    // A stumble is the moment to offer the guru — one tap away, never pushy.
+    els.speechText.innerHTML = text + (mood === "sad" ? ` <button class="speech-guru">🧙 Ask Dronacharya</button>` : "");
   }
+  els.speech.addEventListener("click", (e) => {
+    if (e.target.closest(".speech-guru")) Guru.open("I'm stuck. Can you help me think?");
+  });
+
+  // ---------- Dronacharya, the AI teacher ----------
+
+  // Everything the guru needs to read the kid's situation — fresh each ask.
+  function guruContext() {
+    const lv = level();
+    return {
+      kind: "robo",
+      level: lv,
+      code: els.editor.value,
+      knownCommands: cumulativeCommands(current),
+      completed: completed.has(lv.id),
+      attempts: attempts[lv.id] || 0,
+    };
+  }
+
+  // The hint is a two-step reveal: first a nudge toward the guru, then the hint.
+  function resetHint() {
+    els.hintText.textContent = level().hint;
+    els.hintBox.hidden = true;
+    els.hintNudge.hidden = false;
+    els.hintText.hidden = true;
+  }
+  function revealHint() {
+    els.hintBox.hidden = false;
+    els.hintNudge.hidden = true;
+    els.hintText.hidden = false;
+    els.hintBox.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  els.guruBtn.addEventListener("click", () => Guru.open());
+  els.hintBtn.addEventListener("click", () => { els.hintBox.hidden = !els.hintBox.hidden; });
+  els.hintAskGuru.addEventListener("click", () => {
+    els.hintBox.hidden = true;
+    Guru.open("I'm stuck. Can you help me think?");
+  });
+  els.hintReveal.addEventListener("click", revealHint);
+  // "Just show me the hint" inside the guru's drawer — whichever wing is open.
+  Guru.onHint(() => {
+    Guru.close();
+    if (typeof WebStudio !== "undefined" && WebStudio.isOpen()) WebStudio.revealHint();
+    else revealHint();
+  });
 
   const ESC = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -572,8 +624,8 @@
       ? `🌟 ${lv.title}`
       : `${arenaMains(arenaOf(lv)).indexOf(lv) + 1}. ${lv.title}`;
     els.intro.innerHTML = lv.intro;
-    els.hintText.textContent = lv.hint;
-    els.hintBox.open = false;
+    resetHint();
+    Guru.setLevel("robo:" + lv.id, guruContext);
     renderRules();
     renderCommandRef();
     els.editor.value = localStorage.getItem(CODE_KEY(lv.id)) || "";
@@ -617,6 +669,7 @@
     stopAnimation();
     const lv = level();
     const code = els.editor.value;
+    attempts[lv.id] = (attempts[lv.id] || 0) + 1;
 
     if (!code.trim()) {
       say("My program is empty! Type some instructions first. 📝", "sad");
@@ -952,6 +1005,7 @@
     saveProgress();
     for (const lv of LEVELS) localStorage.removeItem(CODE_KEY(lv.id));
     if (typeof WebStudio !== "undefined") WebStudio.resetProgress();
+    Guru.resetChats();
     loadLevel(0);
   });
 

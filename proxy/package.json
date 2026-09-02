@@ -1,0 +1,6 @@
+{
+  "name": "roboquest-guru-proxy",
+  "private": true,
+  "type": "module",
+  "description": "Dronacharya's brain: a Vercel edge function that holds the Claude API key so the RoboQuest page never does."
+}

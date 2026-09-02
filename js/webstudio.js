@@ -73,7 +73,32 @@ const WebStudio = (() => {
 
   function say(text, mood) {
     els.speech.className = "speech" + (mood ? " " + mood : "");
-    els.speechText.innerHTML = text;
+    els.speechText.innerHTML = text + (mood === "sad" ? ` <button class="speech-guru">🧙 Ask Dronacharya</button>` : "");
+  }
+
+  // ---------- Dronacharya ----------
+
+  // The guru reads the live preview's checklist, not the raw markup.
+  function guruContext() {
+    const lv = level();
+    const doc = els.preview.contentDocument;
+    return {
+      kind: "web",
+      level: lv,
+      code: els.editor.value,
+      checks: lv.checks.map((c) => ({ label: c.label, ok: doc ? checkResult(c, doc) : false })),
+    };
+  }
+  function resetHint() {
+    els.hintText.textContent = level().hint;
+    els.hintBox.hidden = true;
+    els.hintNudge.hidden = false;
+    els.hintText.hidden = true;
+  }
+  function revealHint() {
+    els.hintBox.hidden = false;
+    els.hintNudge.hidden = true;
+    els.hintText.hidden = false;
   }
 
   function renderChecklist(doc) {
@@ -113,8 +138,8 @@ const WebStudio = (() => {
     const lv = level();
     els.levelTitle.textContent = `${lv.emoji} ${idx + 1}. ${lv.title}`;
     els.intro.innerHTML = lv.intro;
-    els.hintText.textContent = lv.hint;
-    els.hintBox.open = false;
+    resetHint();
+    Guru.setLevel("web:" + lv.id, guruContext);
     els.newTags.innerHTML = (lv.newTags || [])
       .map((t) => `<code class="new-tag">${ESC(t)}</code>`)
       .join(" ");
@@ -202,6 +227,11 @@ const WebStudio = (() => {
       newTags: $("studioNewTags"),
       hintBox: $("studioHintBox"),
       hintText: $("studioHintText"),
+      hintNudge: $("studioHintNudge"),
+      hintReveal: $("studioHintReveal"),
+      hintAskGuru: $("studioHintAskGuru"),
+      hintBtn: $("studioHintBtn"),
+      guruBtn: $("studioGuruBtn"),
       checklist: $("studioChecklist"),
       checklistBody: $("studioChecklistBody"),
       targetBox: $("studioTargetBox"),
@@ -230,6 +260,16 @@ const WebStudio = (() => {
       say("Fresh page! Ready when you are.");
     });
     els.back.addEventListener("click", close);
+    els.guruBtn.addEventListener("click", () => Guru.open());
+    els.hintBtn.addEventListener("click", () => { els.hintBox.hidden = !els.hintBox.hidden; });
+    els.hintAskGuru.addEventListener("click", () => {
+      els.hintBox.hidden = true;
+      Guru.open("I'm stuck. Can you help me think?");
+    });
+    els.hintReveal.addEventListener("click", revealHint);
+    els.speech.addEventListener("click", (e) => {
+      if (e.target.closest(".speech-guru")) Guru.open("I'm stuck. Can you help me think?");
+    });
     els.winNext.addEventListener("click", () => {
       els.winBox.hidden = true;
       if (current < WEB_LEVELS.length - 1) loadLevel(current + 1);
@@ -254,6 +294,10 @@ const WebStudio = (() => {
   }
   function close() {
     els.screen.hidden = true;
+    Guru.restore(); // the guru goes back to the arena level underneath
+  }
+  function isOpen() {
+    return !!els && !els.screen.hidden;
   }
   function firstUnfinished() {
     const i = WEB_LEVELS.findIndex((lv) => !completed.has(lv.id));
@@ -265,5 +309,5 @@ const WebStudio = (() => {
     for (const lv of WEB_LEVELS) localStorage.removeItem(CODE_KEY(lv.id));
   }
 
-  return { open, close, tocSection, resetProgress };
+  return { open, close, isOpen, revealHint, tocSection, resetProgress };
 })();
