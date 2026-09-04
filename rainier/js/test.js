@@ -16,7 +16,7 @@ function check(cond, msg) {
   if (!cond) { failures++; console.log("  ❌ " + msg); }
 }
 
-const ALLOWED_VARS = new Set(["hero", "rabbit", "cub", "tapped", "landed", "guess", "total", "over", "position", "cubColor", "word", "standing"]);
+const ALLOWED_VARS = new Set(["hero", "rabbit", "cub", "tapped", "landed", "guess", "total", "over", "position", "cubColor", "word", "standing", "count", "plates"]);
 function vars(text) {
   return [...String(text || "").matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
 }
@@ -93,7 +93,19 @@ for (const s of SCENES) {
       check(s.choices && s.choices.length >= 3, `${s.id}: needs at least 3 cards`);
       check(s.choices.every((c) => c.n > 0 && c.icon && c.label), `${s.id}: every card needs n, icon, label`);
       const needed = s.choices.filter((c) => c.need);
-      if (needed.length) {
+      if (s.exactCards) {
+        // Construct mode: some set of exactly `exactCards` cards must add up to the target.
+        let ways = 0;
+        const nums = s.choices.map((c) => c.n);
+        for (let mask = 1; mask < (1 << nums.length); mask++) {
+          let cnt = 0, sum = 0;
+          for (let i = 0; i < nums.length; i++) if (mask & (1 << i)) { cnt++; sum += nums[i]; }
+          if (cnt === s.exactCards && sum === s.target) ways++;
+        }
+        check(ways > 0, `${s.id}: no ${s.exactCards} cards add up to ${s.target}`);
+        check(ways >= 2, `${s.id}: only one way to make ${s.target} with ${s.exactCards} cards — give her choices`);
+        check(!needed.length, `${s.id}: exactCards and need cannot mix`);
+      } else if (needed.length) {
         check(needed.reduce((a, c) => a + c.n, 0) === s.target, `${s.id}: the needed cards must add up to target ${s.target}`);
       } else {
         check(subsetSums(s.choices.map((c) => c.n), s.target), `${s.id}: no cards add up to ${s.target}`);
@@ -103,12 +115,18 @@ for (const s of SCENES) {
     }
     case "order": {
       check(s.cards && s.cards.length >= 3 && s.cards.length <= 6, `${s.id}: 3 to 6 cards`);
+      if (s.clues) for (const v of vars(s.clues)) check(ALLOWED_VARS.has(v), `${s.id}: unknown placeholder {${v}} in clues`);
       check(s.cards.every((c) => c.icon && c.text), `${s.id}: every card needs icon and text`);
       break;
     }
     case "segments": {
       check(s.total >= 4 && s.total <= 12, `${s.id}: total should be 4..12`);
-      check(s.eat > 0 && s.eat < s.total, `${s.id}: eat must be between 1 and total-1`);
+      if (s.share) {
+        check(s.share >= 2 && s.share <= 4, `${s.id}: share between 2 and 4 plates`);
+        check(s.total % s.share === 0, `${s.id}: ${s.total} segments do not share equally onto ${s.share} plates`);
+      } else {
+        check(s.eat > 0 && s.eat < s.total, `${s.id}: eat must be between 1 and total-1`);
+      }
       break;
     }
     case "boards": {
@@ -135,6 +153,10 @@ for (const s of SCENES) {
       check(s.target > 0 && s.target <= 20, `${s.id}: target 1..20`);
       const tv = s.tokenValue;
       check(tv === undefined || tv > 0 || (Array.isArray(tv) && tv.every((v) => v > 0)), `${s.id}: tokenValue must be positive or a list of positives`);
+      if (s.pick) {
+        check(Array.isArray(s.pick) && s.pick.length >= 2 && s.pick.every((v) => v > 0), `${s.id}: pick must list 2+ token values`);
+        check(s.pick.includes(1) || s.target % Math.min(...s.pick) === 0, `${s.id}: target ${s.target} may be unreachable exactly with tokens ${s.pick}`);
+      }
       break;
     }
     default:
@@ -162,7 +184,7 @@ function readable(where, text) {
   }
 }
 for (const [i, p] of (STORY_PAGES || []).entries()) readable(`page ${i + 1}`, p.text);
-for (const s of SCENES) for (const f of ["before", "task", "after", "wrong", "hint"]) readable(`${s.id}.${f}`, s[f]);
+for (const s of SCENES) for (const f of ["before", "task", "after", "wrong", "hint", "clues", "note"]) if (s[f]) readable(`${s.id}.${f}`, s[f]);
 if (!warnings) console.log("  every sentence is short and every word is small");
 
 console.log("area mix");

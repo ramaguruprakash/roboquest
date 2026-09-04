@@ -79,6 +79,23 @@
   };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  // A note on paper for clues the kid must READ (not auto-spoken): every word taps to hear itself.
+  function paper(text) {
+    const el = document.createElement("div");
+    el.className = "paper";
+    el.innerHTML = `<span class="paper-pin">📌</span><p class="paper-text"></p><small class="paper-tip">Tap a word to hear it</small>`;
+    const p = el.querySelector(".paper-text");
+    for (const w of fill(text).split(/(\s+)/)) {
+      if (/^\s+$/.test(w)) { p.appendChild(document.createTextNode(" ")); continue; }
+      const b = document.createElement("button");
+      b.className = "word";
+      b.textContent = w;
+      b.addEventListener("click", () => speak(w.replace(/[^\w']/g, ""), true));
+      p.appendChild(b);
+    }
+    return el;
+  }
+
   // ---------- Areas and unlocking ----------
 
   const scenesOf = (areaId) => SCENES.filter((s) => s.area === areaId);
@@ -263,7 +280,7 @@
     current = { scene, area, attempts: 0, lastWrong: "", solvedNow: false, mechanic: null };
     const api = {
       names: { hero: names.hero, rabbit: names.rabbit, cub: CUB_NAME, avatar: names.avatar },
-      fill, shuffle, wait, speak,
+      fill, shuffle, wait, speak, paper,
       solved: () => onSolved(),
       wrong: (vars) => onWrong(vars),
       cheer: (text) => companionSay(fill(text)),

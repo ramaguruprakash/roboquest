@@ -3,11 +3,13 @@
 // Fill: tap number cards into a container until it holds the right amount.
 //   target      the total the container must reach
 //   choices     [{ n, icon, label, need? }]  cards on the table
-//               if any card has need: true, exactly the needed cards must go in
-//               (a reading scene: the list says which); otherwise any cards
-//               that sum to target will do
 //   container   emoji for the bag / basket / jar
 //   showTarget  show the target on the meter (false when the note already says it)
+//   clues       optional note shown on paper (not auto-read): the list she must read
+// Three ways to win, by data:
+//   need: true on some cards  -> exactly those cards must go in (a reading list)
+//   exactCards: 3             -> any cards that add up to target, but exactly that many
+//   otherwise                 -> any cards that add up to target
 // Tap a card in the container to take it back out. Overfilling is funny, not fatal.
 
 window.SCENE_TYPES = window.SCENE_TYPES || {};
@@ -16,6 +18,7 @@ window.SCENE_TYPES.fill = {
     const inBag = new Set();
     const needMode = scene.choices.some((c) => c.need);
     let taps = 0;
+    const tries = [];
 
     stage.innerHTML =
       `<div class="fill-wrap">
@@ -25,12 +28,15 @@ window.SCENE_TYPES.fill = {
            <div class="fill-bag-items"></div>
            <div class="fill-meter"><div class="fill-meter-bar"></div>
              <span class="fill-meter-text"></span></div>
+           <div class="fill-count"></div>
          </div>
        </div>`;
+    if (scene.clues) stage.prepend(api.paper(scene.clues));
     const table = stage.querySelector(".fill-table");
     const items = stage.querySelector(".fill-bag-items");
     const bar = stage.querySelector(".fill-meter-bar");
     const text = stage.querySelector(".fill-meter-text");
+    const countEl = stage.querySelector(".fill-count");
     const cards = [];
 
     api.shuffle(scene.choices.map((c, i) => i)).forEach((i) => {
@@ -50,6 +56,7 @@ window.SCENE_TYPES.fill = {
       bar.style.width = pct + "%";
       bar.classList.toggle("over", s > scene.target);
       text.textContent = scene.showTarget === false ? `${s}` : `${s} of ${scene.target}`;
+      countEl.textContent = scene.exactCards ? `${inBag.size} card${inBag.size === 1 ? "" : "s"}` : "";
       items.innerHTML = "";
       for (const i of inBag) {
         const c = scene.choices[i];
@@ -62,29 +69,39 @@ window.SCENE_TYPES.fill = {
       }
       scene.choices.forEach((c, i) => { cards[i].classList.toggle("used", inBag.has(i)); });
     }
+    function win() {
+      stage.querySelector(".fill-bag").classList.add("right");
+      cards.forEach((b) => { b.disabled = true; });
+      items.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+      api.solved();
+    }
     function check() {
       const s = sum();
       const chosen = [...inBag];
-      const needOk = !needMode || (scene.choices.every((c, i) => !!c.need === inBag.has(i)));
-      if (s === scene.target && needOk) {
-        stage.querySelector(".fill-bag").classList.add("right");
-        cards.forEach((b) => { b.disabled = true; });
-        items.querySelectorAll("button").forEach((b) => { b.disabled = true; });
-        api.solved();
-        return;
-      }
+      const vars = { total: s, count: chosen.length, over: s - scene.target };
       if (s > scene.target) {
         // Overflow: the last card bounces back out.
         const last = chosen[chosen.length - 1];
         stage.querySelector(".fill-bag").classList.add("burst");
         setTimeout(() => stage.querySelector(".fill-bag").classList.remove("burst"), 600);
-        api.wrong({ total: s, over: s - scene.target, kind: "over" });
+        tries.push(`overfilled to ${s}`);
+        api.wrong(vars);
         setTimeout(() => { inBag.delete(last); render(); }, 650);
         return;
       }
-      if (needMode && s === scene.target && !needOk) {
-        api.wrong({ total: s, kind: "wrongItems" });
+      if (s !== scene.target) return; // still filling
+      if (needMode) {
+        const ok = scene.choices.every((c, i) => !!c.need === inBag.has(i));
+        tries.push(`reached ${s} with ${chosen.map((i) => scene.choices[i].label).join(", ")}`);
+        if (ok) win(); else api.wrong(vars);
+        return;
       }
+      if (scene.exactCards && chosen.length !== scene.exactCards) {
+        tries.push(`made ${s} with ${chosen.length} cards`);
+        api.wrong(vars);
+        return;
+      }
+      win();
     }
     function toggle(i) {
       if (cards[i].disabled) return;
@@ -98,12 +115,12 @@ window.SCENE_TYPES.fill = {
     return {
       state: () => {
         const chosen = [...inBag].map((i) => scene.choices[i].label);
-        return `${taps} tap(s); in the ${scene.container || "basket"} now: ${chosen.length ? chosen.join(", ") : "nothing"}; total showing ${sum()}`;
+        return `${taps} tap(s); in the ${scene.container || "basket"} now: ${chosen.length ? chosen.join(", ") : "nothing"} (total ${sum()}, ${inBag.size} cards)${tries.length ? `; earlier tries: ${tries.join("; ")}` : ""}`;
       },
       solution: () => needMode
         ? `put in exactly: ${scene.choices.filter((c) => c.need).map((c) => api.fill(c.label)).join(", ")} (total ${scene.target})`
-        : `cards that add up to ${scene.target}, e.g. ${firstSubset().map((c) => c.n).join(" + ")}`,
-      details: () => `cards on the table: ${scene.choices.map((c) => api.fill(c.label)).join(", ")}${scene.showTarget === false ? "" : `; the meter shows the target ${scene.target}`}`,
+        : `${scene.exactCards ? `exactly ${scene.exactCards} ` : ""}cards that add up to ${scene.target}, e.g. ${firstSubset().map((c) => c.n).join(" + ")}`,
+      details: () => `cards on the table: ${scene.choices.map((c) => api.fill(c.label)).join(", ")}${scene.clues ? `; the list on the paper says: "${api.fill(scene.clues)}"` : ""}${scene.showTarget === false ? "" : `; the meter shows the target ${scene.target}`}`,
     };
 
     function firstSubset() {
@@ -111,6 +128,7 @@ window.SCENE_TYPES.fill = {
       const n = cs.length;
       for (let mask = 1; mask < (1 << n); mask++) {
         const pick = cs.filter((_, i) => mask & (1 << i));
+        if (scene.exactCards && pick.length !== scene.exactCards) continue;
         if (pick.reduce((a, c) => a + c.n, 0) === scene.target) return pick;
       }
       return [];

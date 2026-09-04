@@ -1,7 +1,9 @@
 "use strict";
 
-// Order: put picture cards in the order they happened.
+// Order: put picture cards in the right order.
 //   cards: [{ icon, text }] in the CORRECT order; shown shuffled
+//   clues: optional riddle shown on paper (not auto-read) that fixes the order,
+//          e.g. "Sun first. Moon last. The bird comes right after the sun."
 // The kid taps the card that comes next; it slides into the next slot.
 // A wrong card wobbles and stays on the table.
 
@@ -11,6 +13,7 @@ window.SCENE_TYPES.order = {
     let next = 0;
     let misses = 0;
     stage.innerHTML = `<div class="order-wrap"><div class="order-slots"></div><div class="order-table"></div></div>`;
+    if (scene.clues) stage.querySelector(".order-wrap").prepend(api.paper(scene.clues));
     const slots = stage.querySelector(".order-slots");
     const table = stage.querySelector(".order-table");
     scene.cards.forEach((_, i) => {
@@ -51,9 +54,9 @@ window.SCENE_TYPES.order = {
       }
     }
     return {
-      state: () => `${next} of ${scene.cards.length} cards placed in order so far (${misses} wrong tap(s)); placed: ${scene.cards.slice(0, next).map((c) => `"${api.fill(c.text)}"`).join(", ") || "none"}`,
+      state: () => `${next} of ${scene.cards.length} cards placed so far (${misses} wrong tap(s)); placed: ${scene.cards.slice(0, next).map((c) => `"${api.fill(c.text)}"`).join(", ") || "none"}`,
       solution: () => scene.cards.map((c, i) => `${i + 1}. ${api.fill(c.text)}`).join("; "),
-      details: () => `picture cards: ${scene.cards.map((c) => `${c.icon} "${api.fill(c.text)}"`).join(", ")}`,
+      details: () => `picture cards: ${scene.cards.map((c) => `${c.icon} "${api.fill(c.text)}"`).join(", ")}${scene.clues ? `; the sign says: "${api.fill(scene.clues)}"` : ""}`,
     };
   },
 };
