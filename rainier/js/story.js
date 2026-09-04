@@ -26,11 +26,12 @@ const BELTS = ["white", "yellow", "orange", "green", "blue", "purple"];
 // Read aloud, tap to turn. Short sentences, common words — a 7-year-old reads along.
 const STORY_PAGES = [
   { pic: "🐰", text: "This is {rabbit}. {rabbit} is a giant rabbit. {rabbit} lives with {hero}." },
-  { pic: "🏠", text: "This is their home. Sunrise Meadow. Right under the big mountain." },
-  { pic: "🌅", text: "One morning, the hutch is open. {rabbit} is gone!" },
+  { pic: "🏠", text: "This is their home. Sunrise Meadow. Very near Mount Rainier." },
+  { pic: "🌅", text: "One morning, the rabbit house is open. {rabbit} is gone!" },
   { pic: "🐾", text: "Look. Paw prints! Big ones. And little ones." },
   { pic: "🐿️", text: "This is Pip. Pip saw it all. \"A bear cub took {rabbit}! They went up the mountain!\"" },
   { pic: "🛴", text: "{hero} grabs her scooter. \"I'm coming, {rabbit}!\"" },
+  { pic: "🏔️", text: "{hero}, please rescue {rabbit}! Solve all the puzzles. Climb the mountain!" },
 ];
 
 const AREAS = [
@@ -117,7 +118,7 @@ const SCENES = [
     before: "A gate blocks the trail. Pip says: \"I'll tell the gate what happened this morning, but my pictures are all mixed up!\"",
     task: "Tap the pictures in the order they happened.",
     cards: [
-      { icon: "🐰", text: "{rabbit} sleeps in the hutch" },
+      { icon: "🐰", text: "{rabbit} sleeps in the rabbit house" },
       { icon: "🐻", text: "A bear cub opens the door" },
       { icon: "🐾", text: "Two sets of tracks go to the trees" },
       { icon: "🛴", text: "{hero} grabs her scooter" },
