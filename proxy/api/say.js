@@ -7,7 +7,7 @@
 //
 // Environment variables:
 //   ELEVENLABS_API_KEY        from elevenlabs.io → profile → API keys
-//   ELEVEN_VOICE_NARRATOR     voice id for story and scenes (default: Jessica, playful)
+//   ELEVEN_VOICE_NARRATOR     voice id for story and scenes (default: Matilda, warm storyteller)
 //   ELEVEN_VOICE_GURU         voice id for Dronacharya (default: George, warm storyteller)
 //   ELEVEN_MODEL              default eleven_turbo_v2_5 (fast, cheap); eleven_multilingual_v2 for richer
 //   GURU_TOKENS, ALLOWED_ORIGINS   shared with api/guru.js
@@ -19,7 +19,7 @@ export const config = { runtime: "edge" };
 
 const DEFAULT_ORIGINS = ["https://ramaguruprakash.github.io", "http://localhost:8000", "http://127.0.0.1:8000"];
 const VOICES = {
-  narrator: process.env.ELEVEN_VOICE_NARRATOR || "cgSgspJ2msm6clMCkdW9", // Jessica
+  narrator: process.env.ELEVEN_VOICE_NARRATOR || "XrExE9yKIg1WjnnlVkGX", // Matilda: warm, clear, paced for a child reading along
   guru: process.env.ELEVEN_VOICE_GURU || "JBFqnCBsd6RMkjVDRZzb",         // George
 };
 const MODEL = process.env.ELEVEN_MODEL || "eleven_turbo_v2_5";

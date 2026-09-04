@@ -19,6 +19,18 @@ const Voice = (() => {
   };
   let current = null;   // the <audio> playing now
   let disabledUntil = 0; // back off after a hard failure (no key, wrong password)
+  let pending = null;    // audio the browser refused to autoplay; plays on the first tap
+
+  // Browsers block sound until the page has been tapped once. Instead of falling
+  // back to the robotic voice, hold the clip and play it on that first tap.
+  document.addEventListener("pointerdown", () => {
+    if (!pending) return;
+    const { a, opts } = pending;
+    pending = null;
+    current = a;
+    a.play().catch(() => { current = null; });
+    if (opts.onEnd) a.onended = opts.onEnd;
+  }, true);
 
   function url(text, voice) {
     const tok = identity().token;
@@ -46,6 +58,7 @@ const Voice = (() => {
   }
 
   function stop() {
+    pending = null;
     if (current) { current.pause(); current.src = ""; current = null; }
   }
 
@@ -58,7 +71,13 @@ const Voice = (() => {
     const a = new Audio(URL.createObjectURL(blob));
     current = a;
     a.onended = () => { if (current === a) current = null; URL.revokeObjectURL(a.src); if (opts.onEnd) opts.onEnd(); };
-    try { await a.play(); } catch { current = null; return false; }
+    try {
+      await a.play();
+    } catch (e) {
+      current = null;
+      if (e && e.name === "NotAllowedError") { pending = { a, opts }; return true; } // handled: plays on first tap
+      return false;
+    }
     return true;
   }
 
