@@ -20,10 +20,19 @@ asks Claude to coach in Dronacharya's voice, and returns the reply.
    | `GURU_TOKENS` | the passwords kids type, comma-separated: `mayur-2026` (add more later, remove one to revoke it) |
    | `ALLOWED_ORIGINS` | optional; defaults to `https://ramaguruprakash.github.io` plus localhost:8000 |
    | `GURU_MODEL` | optional; defaults to `claude-opus-5` |
+   | `ELEVENLABS_API_KEY` | optional; turns on the ElevenLabs narrator for Rainier Rescue (`/api/say`). Without it the game uses the browser voice |
+   | `ELEVEN_VOICE_NARRATOR` / `ELEVEN_VOICE_GURU` | optional voice ids (defaults: Jessica for the story, George for Dronacharya). List yours with `curl -H "xi-api-key: $KEY" https://api.elevenlabs.io/v1/voices` |
 
 3. Redeploy so the variables take effect. Your endpoint is
    `https://<project>.vercel.app/api/guru`.
 4. Paste that URL into `GURU_ENDPOINT` at the top of `js/guru.js`, and push the game.
+
+## The narrator (`/api/say`)
+
+`GET /api/say?text=...&voice=narrator|guru&token=...` returns MP3 from ElevenLabs. Same origin
+allowlist and password as the guru; at most 400 characters a call and 40,000 an hour per password.
+Responses carry a one-year CDN cache header, so each sentence is generated once and replayed free.
+The game also keeps a copy in the browser's Cache Storage.
 
 ## What protects the key
 

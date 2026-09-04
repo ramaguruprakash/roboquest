@@ -23,11 +23,13 @@ if (fs.existsSync(envFile)) {
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
   }
 }
-for (const k of ["ANTHROPIC_API_KEY", "GURU_TOKENS"]) {
+for (const k of ["ANTHROPIC_API_KEY", "GURU_TOKENS", "ELEVENLABS_API_KEY"]) {
   if (!process.env[k]) console.warn(`⚠️  ${k} is not set — put it in proxy/.env.local`);
 }
 
-const { default: handler } = await import("./api/guru.js");
+const { default: guru } = await import("./api/guru.js");
+const { default: say } = await import("./api/say.js");
+const handler = (request) => (new URL(request.url).pathname.startsWith("/api/say") ? say(request) : guru(request));
 const PORT = Number(process.env.PORT || 3000);
 
 http.createServer(async (req, res) => {

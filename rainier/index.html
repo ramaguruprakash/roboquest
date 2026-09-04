@@ -33,6 +33,8 @@
         <input id="heroName" maxlength="16" autocomplete="off" placeholder="Your name"></label>
       <label>What is your rabbit's name?
         <input id="rabbitName" maxlength="16" autocomplete="off" placeholder="Biscuit"></label>
+      <label>Grown-up password <small>(optional: turns on the story voice and Dronacharya)</small>
+        <input id="grownupToken" type="password" maxlength="64" autocomplete="off"></label>
       <p class="names-pick-label">Pick your hero:</p>
       <div class="avatar-pick" id="avatarPick"></div>
       <button class="run-btn big" id="namesGo">Start the story →</button>
@@ -118,6 +120,7 @@
   <div class="confetti" id="confetti" hidden aria-hidden="true"></div>
 
   <script src="../js/guru.js"></script>
+  <script src="js/voice.js"></script>
   <script src="js/story.js"></script>
   <script src="js/scenes/signpost.js"></script>
   <script src="js/scenes/beam.js"></script>

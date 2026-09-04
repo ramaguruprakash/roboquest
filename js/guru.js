@@ -291,10 +291,23 @@ const Guru = (() => {
     const forSpeech = (text) =>
       String(text).replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, "").replace(/\s+/g, " ").trim();
 
+    // A game may plug in a better voice (e.g. ElevenLabs via the proxy). It gets
+    // (text, opts) and resolves true if it played; otherwise we fall back to the browser.
+    let provider = null;
+    function setProvider(fn) { provider = fn; }
+
     function speak(text, opts = {}) {
-      if (!synth) return false;
       const clean = forSpeech(text);
       if (!clean) return false;
+      if (synth) synth.cancel();
+      if (provider) {
+        provider(clean, { voice: "guru", ...opts }).then((played) => { if (!played) speakLocal(clean, opts); }).catch(() => speakLocal(clean, opts));
+        return true;
+      }
+      return speakLocal(clean, opts);
+    }
+    function speakLocal(clean, opts) {
+      if (!synth) return false;
       synth.cancel();
       const u = new SpeechSynthesisUtterance(clean);
       if (!chosen) chosen = pickVoice();
@@ -305,7 +318,7 @@ const Guru = (() => {
       synth.speak(u);
       return true;
     }
-    function stop() { if (synth) synth.cancel(); }
+    function stop() { if (synth) synth.cancel(); if (provider && provider.stop) provider.stop(); }
 
     // Hold-to-talk. onText(interimTranscript) streams words as they arrive;
     // onDone(finalTranscript) fires when the kid lets go and recognition settles.
@@ -337,7 +350,7 @@ const Guru = (() => {
       };
     }
 
-    return { canListen: !!Recognition, canSpeak: !!synth, speak, stop, listen };
+    return { canListen: !!Recognition, get canSpeak() { return !!synth || !!provider; }, speak, stop, listen, setProvider };
   })();
 
   // ---------- The chat drawer (browser only) ----------
@@ -650,6 +663,7 @@ const Guru = (() => {
 
   return {
     get NAME() { return cfg.name; },
+    get endpoint() { return GURU_ENDPOINT; },
     init, setLevel, restore, open, close, isOpen, onHint, resetChats,
     // Read-aloud for the game itself (scene text, notes), independent of the guru's toggle.
     speech,

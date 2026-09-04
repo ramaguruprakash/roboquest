@@ -15,7 +15,7 @@
 
   const $ = (id) => document.getElementById(id);
   const els = {
-    names: $("namesScreen"), heroName: $("heroName"), rabbitName: $("rabbitName"), avatarPick: $("avatarPick"), namesGo: $("namesGo"),
+    names: $("namesScreen"), heroName: $("heroName"), rabbitName: $("rabbitName"), grownupToken: $("grownupToken"), avatarPick: $("avatarPick"), namesGo: $("namesGo"),
     story: $("storyScreen"), storyPic: $("storyPic"), storyText: $("storyText"), storyDots: $("storyDots"),
     storySpeak: $("storySpeak"), storyBack: $("storyBack"), storyNext: $("storyNext"), storyBtn: $("storyBtn"),
     map: $("mapScreen"), mapAreas: $("mapAreas"), mapHero: $("mapHero"), mapTitle: $("mapTitle"), mapSub: $("mapSub"),
@@ -51,10 +51,15 @@
     if (!on) Guru.speech.stop();
   }
   // force: the kid explicitly asked to hear it (tap a word, tap the parrot), so ignore the toggle.
+  // The narrator (ElevenLabs via the proxy) speaks when a grown-up password is saved;
+  // otherwise the browser's own voice does.
   function speak(text, force) {
-    if ((!voiceOn() && !force) || !Guru.speech.canSpeak) return;
-    Guru.speech.speak(text, { rate: 0.92 });
+    if (!voiceOn() && !force) return;
+    Guru.speech.speak(text, { rate: 0.92, voice: "narrator" });
   }
+  const narrate = (text, opts) => Voice.speak(text, opts);
+  narrate.stop = Voice.stop;
+  Guru.speech.setProvider(narrate);
 
   // {hero}, {rabbit}, {cub} and any per-miss variables.
   function fill(text, vars = {}) {
@@ -124,6 +129,9 @@
     }
     els.heroName.value = names?.hero || "";
     els.rabbitName.value = names?.rabbit || "";
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem("rainier-guru-identity") || "null") || {}; } catch { saved = {}; }
+    els.grownupToken.value = saved.token || "";
     els.namesGo.onclick = () => {
       names = {
         hero: els.heroName.value.trim().slice(0, 16) || "Hero",
@@ -131,6 +139,9 @@
         avatar: picked,
       };
       localStorage.setItem(NAMES_KEY, JSON.stringify(names));
+      // One password unlocks both the narrator's voice and Dronacharya.
+      const token = els.grownupToken.value.trim();
+      if (token) localStorage.setItem("rainier-guru-identity", JSON.stringify({ name: names.hero, token }));
       renderTop();
       if (!localStorage.getItem(STORY_SEEN_KEY)) showStory();
       else showMap();
@@ -163,6 +174,7 @@
     void els.storyPic.offsetWidth;
     els.storyPic.classList.add("pop");
     speak(text);
+    if (STORY_PAGES[page + 1]) Voice.prefetch(fill(STORY_PAGES[page + 1].text));
   }
   function storyNext() {
     if (page < STORY_PAGES.length - 1) { page++; renderPage(); return; }
@@ -258,6 +270,7 @@
     const intro = fill(scene.before);
     els.companionText.textContent = intro;
     speak(intro + " " + fill(scene.task));
+    Voice.prefetch(fill(scene.after) + (done.has(scene.id) ? "" : ` You earned ${scene.reward || 1}!`));
 
     Guru.setLevel("quest:" + scene.id, guruContext);
   }
