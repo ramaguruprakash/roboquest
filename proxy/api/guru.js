@@ -10,7 +10,10 @@
 //   ALLOWED_ORIGINS     optional, comma-separated; defaults below
 //   GURU_MODEL          optional, defaults to claude-opus-5
 //
-// Request:  { name, token, context, history: [{role, text}], question }
+// Request:  { name, token, context, history: [{role, text}], question, spoken }
+//   context.kind is "robo" (RoboQuest), "web" (Web Studio) or "quest" (Rainier Rescue, the
+//   rabbit-rescue game: tap-only reading and maths scenes for a 7-year-old).
+//   spoken: true means the question came through speech recognition.
 // Response: { reply }   or   { error } with 401 / 403 / 413 / 429 / 502
 
 export const config = { runtime: "edge" };
@@ -72,9 +75,29 @@ THE ROBO LANGUAGE (so you never invent syntax)
   define dance:   teach a new word; later write   dance   on its own line to do it
 Columns count left to right from 0; rows count top to bottom from 0. Levels may have a line limit or "must use" words — those are teaching rules, honor them.
 
-FOR WEB STUDIO LEVELS (kind = "web") the kid writes real HTML in a live preview: <h1>, <h2>, <p>, <ul>/<li>, <img src="img/robo.svg">, <button>. Same rules: questions, not markup. You may name a tag; never type their page for them.`;
+FOR WEB STUDIO LEVELS (kind = "web") the kid writes real HTML in a live preview: <h1>, <h2>, <p>, <ul>/<li>, <img src="img/robo.svg">, <button>. Same rules: questions, not markup. You may name a tag; never type their page for them.
+
+FOR QUEST SCENES (kind = "quest") you are coaching a YOUNGER kid, about 7, in a tap-only story game: her hero is rescuing a giant rabbit on Mt Rainier, and each scene is a reading or maths puzzle (read a note and tap the right thing, tap numbers to fill a basket to a total, hop along a beam, order picture cards, a card duel with a bear cub). Adjust:
+- Even shorter: 1 to 3 sentences, words a 7-year-old knows. Your reply is read ALOUD to her, so no lists, no symbols, no code.
+- For adding: suggest fingers, counting on from the bigger number, or making a ten first. For "how many more": count up from what she has. For subtraction: count back, or think "what plus this makes that". For tens and ones: bags of ten and loose ones.
+- For reading: sound the word out slowly, find the word in the note that tells you, look at the picture and check.
+- Never say the answer or the number. Never say which card or sign is right. Point at the note, the meter, the picture.`;
 
 function contextBlock(ctx) {
+  if (ctx.kind === "quest") {
+    const lv = ctx.level || {};
+    return [
+      `SCENE: ${lv.title}  (area: ${lv.area}; puzzle type: ${lv.mechanic}; skill: ${lv.skill})`,
+      `THE STORY SO FAR IN THIS SCENE: ${lv.story}`,
+      `WHAT THE SCENE ASKS: ${lv.task}`,
+      lv.details ? `WHAT IS ON THE SCREEN: ${lv.details}` : "",
+      `SCENE HINT (secret, for steering only): ${lv.hint}`,
+      `THE ANSWER (secret, never reveal, never confirm a guess): ${lv.solution}`,
+      `WHAT THE KID HAS DONE SO FAR: ${ctx.state || "nothing yet"}`,
+      `WHAT HAPPENED: ${ctx.report || "no attempt yet"}`,
+      `Tries so far: ${lv.attempts || 0}${lv.completed ? " (she has ALREADY solved this scene before)" : ""}.`,
+    ].filter(Boolean).join("\n\n");
+  }
   if (ctx.kind === "web") {
     return [
       `LEVEL: ${ctx.level.title}`,
@@ -134,14 +157,14 @@ export default async function handler(req) {
   } catch {
     return json({ error: "bad json" }, 400, headers);
   }
-  const { name = "", token = "", context, history = [], question = "" } = body || {};
+  const { name = "", token = "", context, history = [], question = "", spoken = false } = body || {};
 
   const tokens = (process.env.GURU_TOKENS || "").split(",").map((s) => s.trim()).filter(Boolean);
   if (!tokens.length) return json({ error: "GURU_TOKENS not configured" }, 500, headers);
   if (typeof token !== "string" || !tokens.includes(token)) return json({ error: "wrong password" }, 401, headers);
   if (rateLimited(token)) return json({ error: "slow down" }, 429, headers);
 
-  if (!context || (context.kind !== "robo" && context.kind !== "web") || typeof question !== "string") {
+  if (!context || !["robo", "web", "quest"].includes(context.kind) || typeof question !== "string") {
     return json({ error: "bad request" }, 400, headers);
   }
   if (JSON.stringify(context).length > 12_000 || question.length > 400 || !Array.isArray(history) || history.length > 8) {
@@ -164,6 +187,7 @@ export default async function handler(req) {
     role: "user",
     content:
       `<situation>\n${contextBlock(context)}\n</situation>\n\n` +
+      (spoken ? "(The kid said this out loud and a computer wrote it down, so a word or two may be wrong. If it makes no sense, ask what she meant.)\n" : "") +
       `The kid${kidName ? ` (${kidName})` : ""} says: ${question.trim() || "I'm stuck. Can you help me think?"}`,
   });
 

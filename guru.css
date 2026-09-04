@@ -1,0 +1,250 @@
+/* Dronacharya, the AI teacher — shared by RoboQuest and its sibling games.
+   Expects the toybox tokens from the page's own stylesheet:
+   --ink --ink-soft --card --paper --tile --tile-line --robo --sun --display-font --body-font
+   and the .run-btn button style. */
+
+.help-row { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
+.guru-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--display-font);
+  font-size: 1rem;
+  color: var(--ink);
+  background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  border: 2.5px solid var(--ink);
+  border-radius: 14px;
+  padding: 8px 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--ink);
+  transition: transform 0.08s;
+}
+.guru-btn img { width: 34px; height: 34px; }
+.guru-btn:hover { transform: translateY(-1px); }
+.guru-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--ink); }
+.hint-btn {
+  font-family: var(--body-font);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  background: var(--tile);
+  border: 1.5px solid var(--tile-line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.hint-btn:hover { border-color: var(--robo); color: var(--ink); }
+
+.hint-box {
+  margin-top: 10px;
+  border: 1.5px dashed var(--sun);
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #fffbea;
+}
+.hint-box[hidden] { display: none; }
+.hint-box p { font-size: 0.9rem; line-height: 1.5; }
+.hint-box p[hidden] { display: none; }
+.hint-nudge { color: var(--ink-soft); }
+.hint-mini {
+  font: inherit;
+  font-size: 0.82rem;
+  margin: 6px 6px 0 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--tile-line);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+.hint-mini:hover { border-color: var(--robo); }
+
+.speech-guru {
+  font: inherit;
+  font-size: 0.8rem;
+  margin-left: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  background: #fff3e0;
+  color: var(--ink);
+  cursor: pointer;
+  vertical-align: middle;
+}
+.speech-guru:hover { background: #ffe0b2; }
+
+/* The chat drawer — floats above every wing */
+.guru-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 380px;
+  max-height: min(78vh, 640px);
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(35, 41, 70, 0.28);
+  z-index: 20;
+  overflow: hidden;
+  animation: pop-in 0.2s ease-out;
+}
+.guru-panel[hidden] { display: none; }
+.guru-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  border-bottom: 2.5px solid var(--ink);
+}
+.guru-avatar { width: 48px; height: 48px; animation: guru-bob 3s ease-in-out infinite; }
+@keyframes guru-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-3px) rotate(2deg); }
+}
+.guru-title { flex: 1; display: flex; flex-direction: column; line-height: 1.2; }
+.guru-title b { font-family: var(--display-font); font-size: 1.15rem; }
+.guru-title small { font-size: 0.75rem; color: var(--ink-soft); }
+.guru-icon-btn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 4px 6px;
+  color: var(--ink);
+}
+.guru-icon-btn:hover { background: rgba(35, 41, 70, 0.1); }
+
+.guru-signin { padding: 14px 16px 6px; display: flex; flex-direction: column; gap: 10px; border-bottom: 2px solid var(--tile-line); }
+.guru-signin[hidden] { display: none; }
+.guru-namaste { font-family: var(--display-font); font-size: 1.05rem; }
+.guru-signin label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--ink-soft); }
+.guru-signin input {
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  padding: 8px 10px;
+  border: 2px solid var(--tile-line);
+  border-radius: 10px;
+  background: var(--tile);
+}
+.guru-signin input:focus { outline: 3px solid var(--robo); outline-offset: 1px; border-color: var(--robo); }
+.guru-signin-note { font-size: 0.78rem; color: var(--ink-soft); }
+.guru-go { align-self: flex-end; font-size: 0.95rem; padding: 8px 18px; margin-bottom: 8px; }
+
+.guru-messages {
+  flex: 1;
+  min-height: 140px;
+  overflow-y: auto;
+  padding: 12px 12px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--paper);
+}
+.guru-msg { display: flex; gap: 8px; align-items: flex-end; }
+.guru-msg.kid { justify-content: flex-end; }
+.guru-msg-avatar { width: 30px; height: 30px; flex: none; }
+.guru-bubble {
+  max-width: 82%;
+  padding: 9px 12px;
+  border-radius: 14px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  border: 2px solid var(--ink);
+}
+.guru-msg.guru .guru-bubble { background: var(--card); border-bottom-left-radius: 4px; }
+.guru-msg.kid .guru-bubble { background: #e3ecff; border-color: var(--robo); border-bottom-right-radius: 4px; }
+.guru-msg.typing .guru-bubble { color: var(--ink-soft); font-style: italic; animation: guru-pulse 1.2s ease-in-out infinite; }
+@keyframes guru-pulse { 50% { opacity: 0.45; } }
+
+.guru-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 0; background: var(--paper); }
+.guru-chip {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--tile-line);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+.guru-chip:hover { border-color: var(--robo); }
+
+.guru-input { display: flex; gap: 8px; padding: 10px 12px; background: var(--paper); }
+.guru-input input {
+  flex: 1;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  padding: 9px 12px;
+  border: 2px solid var(--tile-line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.guru-input input:focus { outline: 3px solid var(--robo); outline-offset: 1px; border-color: var(--robo); }
+.guru-send { font-size: 0.95rem; padding: 8px 16px; }
+
+.guru-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 14px 8px;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  border-top: 2px solid var(--tile-line);
+}
+.guru-link {
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+.guru-link:hover { color: var(--ink); }
+
+@media (max-width: 560px) {
+  .guru-panel { right: 0; bottom: 0; left: 0; width: auto; max-height: 85vh; border-radius: 20px 20px 0 0; border-width: 3px 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guru-avatar, .guru-msg.typing .guru-bubble { animation: none; }
+  .guru-panel { animation: none; }
+}
+
+/* Hold-to-talk mic and the read-aloud toggle */
+.guru-mic {
+  font: inherit;
+  font-size: 1.25rem;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--card);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.08s;
+}
+.guru-mic[hidden] { display: none; }
+.guru-mic:hover { transform: scale(1.05); }
+.guru-mic.listening {
+  background: var(--berry, #f25f5c);
+  border-color: var(--berry, #f25f5c);
+  color: #fff;
+  animation: guru-listen 1s ease-in-out infinite;
+}
+@keyframes guru-listen {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(242, 95, 92, 0.55); }
+  50% { box-shadow: 0 0 0 10px rgba(242, 95, 92, 0); }
+}
+.guru-icon-btn[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .guru-mic.listening { animation: none; }
+}

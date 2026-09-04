@@ -46,7 +46,8 @@ Every level has an **Ask Dronacharya** button. The guru reads the level, the kid
 what actually happened when it ran (crashed into a wall on line 3, ended two squares from the
 flag, walked over a gem without `pickup`…) and replies with a *question or a nudge, never the
 answer*. Ask again about the same problem and the nudges get more concrete. The level's direct
-hint is still there behind the small **💡 Hint** button, one deliberate click deeper.
+hint is still there behind the small **💡 Hint** button, one deliberate click deeper. Kids can hold the
+**🎤** to talk instead of typing, and replies are read aloud (toggle with 🔊).
 
 The brain is Claude, reached through a tiny proxy in [`proxy/`](proxy/README.md) so this static
 page never holds an API key. The kid signs in once with a first name and a **password from a
@@ -92,10 +93,11 @@ Errors are friendly and kid-voiced ("Bonk! 🤕 Robo walked into a wall", typo s
 | `js/interpreter.js` | Robo language: parser + interpreter, no dependencies |
 | `js/levels.js` | All level data — world grids, intros, hints, rules, reference solutions |
 | `js/app.js` | UI: rendering, animation, progress, speech bubble |
-| `js/guru.js` | Dronacharya: the chat drawer, sign-in, and the plain-English run report sent to the proxy |
+| `js/guru.js` / `guru.css` | Dronacharya: the chat drawer, sign-in, hold-to-talk mic, spoken replies, and the plain-English run report sent to the proxy. Shared with the sibling game via `Guru.init` |
 | `proxy/api/guru.js` | Vercel edge function: password check, rate limit, the guru's system prompt, the Claude call |
 | `js/weblevels.js` / `js/webstudio.js` | Robo's Web Studio — HTML levels with a live preview |
 | `js/test.js` | `node js/test.js` — verifies every level's solution wins and obeys its own rules |
+| `rainier/` | **Rainier Rescue**, a tap-only reading-and-maths quest for a 7-year-old — see [`rainier/README.md`](rainier/README.md) |
 
 ## Adding a level
 

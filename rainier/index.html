@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rainier Rescue — save the giant rabbit!</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="../guru.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐰</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">🐰 <span class="logo-text" id="logoText">Rainier Rescue</span></div>
+    <nav class="header-nav" aria-label="Menu">
+      <button id="mapBtn" class="nav-btn">🗺️ Map</button>
+      <span class="stat" title="Oranges earned">🍊 <b id="orangeCount">0</b></span>
+      <span class="stat belt" id="beltBadge">⬜ white belt</span>
+    </nav>
+    <span class="header-spacer"></span>
+    <button id="voiceBtn" class="nav-btn icon" title="Read everything aloud">🔊</button>
+    <button id="namesEdit" class="ghost-btn" title="Change your names">✏️ Names</button>
+    <button id="resetBtn" class="ghost-btn" title="Erase everything and start from the meadow">Start over</button>
+  </header>
+
+  <!-- First visit: who is the hero, and who is the rabbit? -->
+  <div class="screen names" id="namesScreen" hidden>
+    <div class="names-card">
+      <div class="names-hero">🐰</div>
+      <h1>A giant rabbit is missing!</h1>
+      <p>Before we follow the paw prints, tell me two names. A grown-up can type them.</p>
+      <label>Your hero's name (that's you!)
+        <input id="heroName" maxlength="16" autocomplete="off" placeholder="Your name"></label>
+      <label>Your rabbit's name
+        <input id="rabbitName" maxlength="16" autocomplete="off" placeholder="Biscuit"></label>
+      <p class="names-pick-label">Pick your hero:</p>
+      <div class="avatar-pick" id="avatarPick"></div>
+      <button class="run-btn big" id="namesGo">Let's go find the rabbit! →</button>
+    </div>
+  </div>
+
+  <!-- The map: five areas up the mountain, paw prints filling in -->
+  <div class="screen map" id="mapScreen" hidden>
+    <div class="map-inner">
+      <div class="map-hero">
+        <span class="map-hero-avatar" id="mapHero">🤸‍♀️</span>
+        <div>
+          <h1 id="mapTitle"></h1>
+          <p id="mapSub"></p>
+        </div>
+      </div>
+      <div class="areas" id="mapAreas"></div>
+    </div>
+  </div>
+
+  <!-- One scene -->
+  <main class="scene" id="sceneScreen" hidden>
+    <section class="card story-panel">
+      <div class="area-tag" id="areaTag"></div>
+      <h1 id="sceneTitle"></h1>
+      <div class="companion">
+        <span class="companion-emoji" id="companionEmoji">🐿️</span>
+        <div class="companion-bubble">
+          <p id="companionText"></p>
+          <button class="speak-btn" id="sayAgain" title="Say it again">🔊</button>
+        </div>
+      </div>
+      <div class="task">
+        <p id="taskText"></p>
+        <button class="speak-btn" id="taskSpeak" title="Read the task aloud">🔊</button>
+      </div>
+      <div class="help-row">
+        <button class="guru-btn" id="guruBtn"><img src="../img/guru.svg" alt="">Ask Dronacharya</button>
+        <button class="hint-btn" id="hintBtn" title="Show this scene's hint">💡 Hint</button>
+      </div>
+      <div class="hint-box" id="hintBox" hidden>
+        <p class="hint-nudge" id="hintNudge">Want a clue first? A good question beats an answer.
+          <button class="hint-mini" id="hintAskGuru">🧙 Ask Dronacharya</button>
+          <button class="hint-mini" id="hintReveal">👀 Show the hint</button></p>
+        <p id="hintText" hidden></p>
+      </div>
+    </section>
+
+    <section class="stage-panel">
+      <div class="stage" id="stage"></div>
+      <div class="scene-foot">
+        <button class="reset-btn" id="backBtn">🗺️ Back to the map</button>
+        <button class="run-btn" id="nextBtn" hidden>Next →</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Area complete: the clue and the belt -->
+  <div class="overlay" id="areaOverlay" hidden>
+    <div class="overlay-card">
+      <div class="overlay-emoji">🎉</div>
+      <h2 id="overlayTitle"></h2>
+      <p class="overlay-clue" id="overlayClue"></p>
+      <p class="overlay-belt" id="overlayBelt"></p>
+      <button class="run-btn big" id="overlayGo">Back to the map →</button>
+    </div>
+  </div>
+
+  <div class="confetti" id="confetti" hidden aria-hidden="true"></div>
+
+  <script src="../js/guru.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/scenes/signpost.js"></script>
+  <script src="js/scenes/beam.js"></script>
+  <script src="js/scenes/fill.js"></script>
+  <script src="js/scenes/order.js"></script>
+  <script src="js/scenes/segments.js"></script>
+  <script src="js/scenes/cards.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
