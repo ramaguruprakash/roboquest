@@ -5,10 +5,12 @@
 
 const path = require("path");
 const { BELTS, AREAS, SCENES, STORY_PAGES } = require("./story.js");
+const Robo = require("../../js/interpreter.js");
+global.Robo = Robo;
 
 // The puzzle modules register on window; give them one.
 global.window = {};
-for (const f of ["signpost", "beam", "fill", "order", "segments", "cards", "boards", "listen", "note", "detective", "scale", "wordbuild", "pattern", "path", "memory"]) require(path.join(__dirname, "scenes", f + ".js"));
+for (const f of ["signpost", "beam", "fill", "order", "segments", "cards", "boards", "listen", "note", "detective", "scale", "wordbuild", "pattern", "path", "memory", "program", "sortbins", "logicgrid", "tens", "equation", "guess"]) require(path.join(__dirname, "scenes", f + ".js"));
 const TYPES = global.window.SCENE_TYPES;
 
 let failures = 0;
@@ -16,7 +18,7 @@ function check(cond, msg) {
   if (!cond) { failures++; console.log("  ❌ " + msg); }
 }
 
-const ALLOWED_VARS = new Set(["hero", "rabbit", "cub", "tapped", "landed", "guess", "total", "over", "position", "cubColor", "word", "standing", "count", "plates", "clue", "left", "right", "letter", "steps", "acorns", "a", "b"]);
+const ALLOWED_VARS = new Set(["hero", "rabbit", "cub", "tapped", "landed", "guess", "total", "over", "position", "cubColor", "word", "standing", "count", "plates", "clue", "left", "right", "letter", "steps", "acorns", "a", "b", "bin", "items", "bags", "pebbles", "reason"]);
 function vars(text) {
   return [...String(text || "").matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
 }
@@ -219,6 +221,68 @@ for (const s of SCENES) {
       const pool = s.values.slice(); let ok = true;
       while (pool.length) { const v = pool.shift(); const j = pool.indexOf(s.sum - v); if (j < 0) { ok = false; break; } pool.splice(j, 1); }
       check(ok, `${s.id}: the numbers do not all pair up to ${s.sum}`);
+      break;
+    }
+    case "sortbins": {
+      const T = TYPES.sortbins;
+      check(s.bins && s.bins.length === 2, `${s.id}: needs exactly 2 bins`);
+      check(s.items && s.items.length >= 4, `${s.id}: needs 4+ items to sort`);
+      check(s.bins[0].examples.every((n) => T.test(s.rule, n)) && s.bins[1].examples.every((n) => !T.test(s.rule, n)), `${s.id}: the examples do not follow the rule "${s.rule}"`);
+      check(s.items.some((n) => T.test(s.rule, n)) && s.items.some((n) => !T.test(s.rule, n)), `${s.id}: items should land in both bins`);
+      break;
+    }
+    case "logicgrid": {
+      const T = TYPES.logicgrid;
+      check(s.people.length === s.places.length && s.people.length >= 3, `${s.id}: same number of friends and places, at least 3`);
+      const names = s.people.map((p) => p.name);
+      const perms = (arr) => arr.length <= 1 ? [arr] : arr.flatMap((v, i) => perms(arr.filter((_, j) => j !== i)).map((rest) => [v, ...rest]));
+      let ok = 0;
+      for (const perm of perms([...Array(names.length).keys()])) { const seat = {}; names.forEach((n, i) => { seat[n] = perm[i]; }); if (!T.check(s, seat)) ok++; }
+      check(ok === 1, `${s.id}: the clues allow ${ok} seating(s); need exactly 1`);
+      for (const r of s.rules) check(r.say, `${s.id}: every rule needs a "say"`);
+      for (const v of vars(s.clues)) check(ALLOWED_VARS.has(v), `${s.id}: unknown placeholder {${v}} in clues`);
+      break;
+    }
+    case "tens": {
+      const total = s.prices.reduce((a, p) => a + p.n, 0);
+      check(total >= 10 && total <= 99, `${s.id}: total ${total} should be two digits`);
+      const fewest = Math.floor(total / 10) + (total % 10);
+      if (s.limit) check(s.limit >= fewest, `${s.id}: limit ${s.limit} is below the fewest things possible (${fewest})`);
+      check(String(total) === String(s.after.match(/\d+/)?.[0] || total), `${s.id}: the after text should mention ${total}`);
+      break;
+    }
+    case "equation": {
+      const n = s.tiles.length, rows = s.sentences || 2;
+      check(n === rows * 3, `${s.id}: ${rows} sums need ${rows * 3} tiles, got ${n}`);
+      let ways = 0;
+      const used = new Array(n).fill(false);
+      (function rec(r) {
+        if (r === rows) { ways++; return; }
+        for (let i = 0; i < n; i++) if (!used[i]) for (let j = 0; j < n; j++) if (!used[j] && j !== i) for (let k = 0; k < n; k++) if (!used[k] && k !== i && k !== j) {
+          if (s.tiles[i] + s.tiles[j] === s.tiles[k]) { used[i] = used[j] = used[k] = true; rec(r + 1); used[i] = used[j] = used[k] = false; }
+        }
+      })(0);
+      check(ways >= 1, `${s.id}: the tiles cannot all be used in true sums`);
+      check(ways >= 2, `${s.id}: only one arrangement works`);
+      break;
+    }
+    case "program": {
+      const T = TYPES.program;
+      const world = T.worldFrom(s.map);
+      check(world.robot && world.goal, `${s.id}: map needs S and F`);
+      check(s.map.every((r) => r.length === s.map[0].length), `${s.id}: map rows must be equal length`);
+      check(Array.isArray(s.solution) && s.solution.length <= s.maxCards, `${s.id}: solution uses ${s.solution?.length} cards, max is ${s.maxCards}`);
+      check(s.solution.every((k) => (s.cards || Object.keys(T.CARD)).includes(k)), `${s.id}: solution uses a card that is not offered`);
+      const r = Robo.run(Robo.parse(s.solution.map((k) => T.CARD[k].code).join("\n")), world);
+      check(!r.error, `${s.id}: solution crashes: ${r.error && r.error.message}`);
+      check(r.final.gems.length === 0, `${s.id}: solution leaves ${r.final.gems.length} fish`);
+      check(r.final.x === world.goal.x && r.final.y === world.goal.y, `${s.id}: solution does not end on the flag`);
+      for (const v of vars(s.clues)) check(ALLOWED_VARS.has(v), `${s.id}: unknown placeholder {${v}} in clues`);
+      break;
+    }
+    case "guess": {
+      const span = (s.max || 20) - (s.min || 1) + 1;
+      check(Math.ceil(Math.log2(span)) <= (s.questions || 5), `${s.id}: ${s.questions} questions cannot always find a number among ${span}`);
       break;
     }
     case "cards": {
