@@ -23,7 +23,7 @@ karate belt (yellow, orange, green, blue, purple); every scene earns oranges.
 |---|---|
 | `index.html` / `style.css` | The names screen, the map, one scene at a time |
 | `js/story.js` | All the data: `AREAS`, `SCENES`, belts. Text may use `{hero}`, `{rabbit}`, `{cub}` |
-| `js/scenes/*.js` | One puzzle type per file: `signpost`, `beam`, `fill`, `order`, `segments`, `cards`, `boards`, `listen`, `note` |
+| `js/scenes/*.js` | One puzzle type per file. Meadow: `signpost`, `beam`, `fill`, `order`, `segments`, `cards`. Forest: `detective`, `scale`, `wordbuild`, `pattern`, `path`, `memory`. Spare: `boards`, `listen`, `note` |
 | `js/app.js` | The runner: progress, unlocking, read-aloud, oranges, belts, Dronacharya |
 | `js/test.js` | `node rainier/js/test.js` checks every scene is solvable and every area mixes skills |
 | `../js/guru.js`, `../guru.css` | Dronacharya, shared with RoboQuest (`kind: "quest"`) |
@@ -31,6 +31,11 @@ karate belt (yellow, orange, green, blue, purple); every scene earns oranges.
 A puzzle module exports `mount(scene, stage, api)` and calls `api.solved()` or
 `api.wrong(vars)`; it returns `{ state, solution, details }` so the guru can coach the
 exact moment. The runner handles the story text, the companion, rewards and the map.
+
+Design rules that the harness enforces where it can: sentences of ten words or fewer;
+puzzles she constructs rather than picks (several valid answers, every move reversible,
+a wrong try shows her something); each area mixes reading and maths; clue text she must
+read sits on a paper and is never auto-spoken, though every word taps to hear itself.
 
 ## Adding a scene
 

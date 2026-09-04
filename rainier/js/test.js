@@ -8,7 +8,7 @@ const { BELTS, AREAS, SCENES, STORY_PAGES } = require("./story.js");
 
 // The puzzle modules register on window; give them one.
 global.window = {};
-for (const f of ["signpost", "beam", "fill", "order", "segments", "cards", "boards", "listen", "note"]) require(path.join(__dirname, "scenes", f + ".js"));
+for (const f of ["signpost", "beam", "fill", "order", "segments", "cards", "boards", "listen", "note", "detective", "scale", "wordbuild", "pattern", "path", "memory"]) require(path.join(__dirname, "scenes", f + ".js"));
 const TYPES = global.window.SCENE_TYPES;
 
 let failures = 0;
@@ -16,7 +16,7 @@ function check(cond, msg) {
   if (!cond) { failures++; console.log("  ❌ " + msg); }
 }
 
-const ALLOWED_VARS = new Set(["hero", "rabbit", "cub", "tapped", "landed", "guess", "total", "over", "position", "cubColor", "word", "standing", "count", "plates"]);
+const ALLOWED_VARS = new Set(["hero", "rabbit", "cub", "tapped", "landed", "guess", "total", "over", "position", "cubColor", "word", "standing", "count", "plates", "clue", "left", "right", "letter", "steps", "acorns", "a", "b"]);
 function vars(text) {
   return [...String(text || "").matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
 }
@@ -149,6 +149,78 @@ for (const s of SCENES) {
       for (const o of s.objects) for (const v of vars(o.label)) check(ALLOWED_VARS.has(v), `${s.id}: unknown placeholder {${v}} in object label`);
       break;
     }
+    case "detective": {
+      check(s.suspects && s.suspects.length >= 3, `${s.id}: needs at least 3 suspects`);
+      check(s.rules && s.rules.length >= 2, `${s.id}: needs at least 2 clues`);
+      const fits = s.suspects.map((sp) => s.rules.every((r) => sp.tags.includes(r.tag) === r.has));
+      check(fits.filter(Boolean).length === 1, `${s.id}: exactly one suspect must fit every clue (found ${fits.filter(Boolean).length})`);
+      check(fits[s.answer], `${s.id}: answer does not fit the clues`);
+      for (const r of s.rules) check(s.suspects.some((sp) => sp.tags.includes(r.tag) !== r.has), `${s.id}: clue about "${r.tag}" rules nobody out`);
+      for (const v of vars(s.clues)) check(ALLOWED_VARS.has(v), `${s.id}: unknown placeholder {${v}} in clues`);
+      break;
+    }
+    case "scale": {
+      check(s.rocks && s.rocks.length >= 4 && s.rocks.every((w) => w > 0), `${s.id}: needs 4+ positive rocks`);
+      const tot = s.rocks.reduce((a, b) => a + b, 0);
+      check(tot % 2 === 0, `${s.id}: rocks total ${tot} is odd — cannot balance`);
+      let splits = 0;
+      for (let mask = 1; mask < (1 << s.rocks.length) - 1; mask++) {
+        const l = s.rocks.reduce((a, w, i) => a + ((mask & (1 << i)) ? w : 0), 0);
+        if (l === tot / 2) splits++;
+      }
+      check(splits >= 4, `${s.id}: only ${splits / 2} way(s) to balance — give her choices`);
+      break;
+    }
+    case "wordbuild": {
+      check(typeof s.word === "string" && s.word.length >= 3 && s.word.length <= 7, `${s.id}: word of 3 to 7 letters`);
+      const pool = (s.letters || []).slice();
+      for (const ch of s.word) { const k = pool.indexOf(ch); check(k >= 0, `${s.id}: letter "${ch}" missing from tiles`); if (k >= 0) pool.splice(k, 1); }
+      check(pool.length >= 1 && pool.length <= 3, `${s.id}: 1 to 3 decoy letters`);
+      check(typeof s.riddle === "string" && s.riddle.length > 10, `${s.id}: needs a riddle`);
+      break;
+    }
+    case "pattern": {
+      const holes = (s.sequence || []).filter((v) => v === null).length;
+      check(holes >= 1 && holes <= 4, `${s.id}: 1 to 4 holes`);
+      check(Array.isArray(s.answers) && s.answers.length === holes, `${s.id}: answers must match the holes`);
+      check(s.answers.every((a) => s.tiles.includes(a)), `${s.id}: every answer must be a tile`);
+      check(s.tiles.length > new Set(s.answers).size, `${s.id}: add a decoy tile`);
+      // The filled row must actually repeat with some period.
+      const full = s.sequence.slice(); let k = 0; full.forEach((v, i) => { if (v === null) full[i] = s.answers[k++]; });
+      const periodic = [1, 2, 3, 4, 5].some((p) => full.every((v, i) => i < p || v === full[i - p]));
+      check(periodic, `${s.id}: the filled pattern does not repeat`);
+      break;
+    }
+    case "path": {
+      const rows = s.grid || [];
+      check(rows.length >= 3 && rows.every((r) => r.length === rows[0].length), `${s.id}: grid rows must be equal length`);
+      let S, X; const acorns = [];
+      rows.forEach((r, y) => [...r].forEach((c, x) => { if (c === "S") S = [x, y]; if (c === "X") X = [x, y]; if (c === "a") acorns.push(1); }));
+      check(S && X, `${s.id}: grid needs S and X`);
+      if (S && X) {
+        const W = rows[0].length, H = rows.length; let ways = 0; const seen = new Set([S.join(",")]);
+        (function dfs(x, y, st, got) {
+          if (st > s.steps) return;
+          if (x === X[0] && y === X[1]) { if (st === s.steps && got === acorns.length) ways++; return; }
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+            const c = rows[ny][nx], k = nx + "," + ny; if (c === "#" || seen.has(k)) continue;
+            seen.add(k); dfs(nx, ny, st + 1, got + (c === "a" ? 1 : 0)); seen.delete(k);
+          }
+        })(S[0], S[1], 0, 0);
+        check(ways >= 1, `${s.id}: no ${s.steps}-step route collects every acorn`);
+        check(ways >= 2, `${s.id}: only one valid route — give her choices`);
+      }
+      for (const v of vars(s.clues)) check(ALLOWED_VARS.has(v), `${s.id}: unknown placeholder {${v}} in clues`);
+      break;
+    }
+    case "memory": {
+      check(s.values && s.values.length % 2 === 0 && s.values.length >= 6 && s.values.length <= 12, `${s.id}: 6 to 12 leaves, an even number`);
+      const pool = s.values.slice(); let ok = true;
+      while (pool.length) { const v = pool.shift(); const j = pool.indexOf(s.sum - v); if (j < 0) { ok = false; break; } pool.splice(j, 1); }
+      check(ok, `${s.id}: the numbers do not all pair up to ${s.sum}`);
+      break;
+    }
     case "cards": {
       check(s.target > 0 && s.target <= 20, `${s.id}: target 1..20`);
       const tv = s.tokenValue;
@@ -184,7 +256,7 @@ function readable(where, text) {
   }
 }
 for (const [i, p] of (STORY_PAGES || []).entries()) readable(`page ${i + 1}`, p.text);
-for (const s of SCENES) for (const f of ["before", "task", "after", "wrong", "hint", "clues", "note"]) if (s[f]) readable(`${s.id}.${f}`, s[f]);
+for (const s of SCENES) for (const f of ["before", "task", "after", "wrong", "hint", "clues", "note", "riddle"]) if (s[f]) readable(`${s.id}.${f}`, s[f]);
 if (!warnings) console.log("  every sentence is short and every word is small");
 
 console.log("area mix");
