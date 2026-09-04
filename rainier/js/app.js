@@ -47,7 +47,10 @@
   }
   function setVoice(on) {
     try { localStorage.setItem(VOICE_KEY, on ? "on" : "off"); } catch { /* fine */ }
-    els.voiceBtn.textContent = on ? "🔊" : "🔇";
+    els.voiceBtn.textContent = on ? (Voice.available() ? "🔊✨" : "🔊") : "🔇";
+    els.voiceBtn.title = !on ? "Sound is off. Tap to turn it on."
+      : Voice.available() ? "Story voice: ElevenLabs narrator (Matilda). Tap to mute."
+      : "Story voice: the browser's own voice. Add the grown-up password under ✏️ Names to get the narrator. Tap to mute.";
     if (!on) Guru.speech.stop();
   }
   // force: the kid explicitly asked to hear it (tap a word, tap the parrot), so ignore the toggle.
@@ -142,6 +145,7 @@
       // One password unlocks both the narrator's voice and Dronacharya.
       const token = els.grownupToken.value.trim();
       if (token) localStorage.setItem("rainier-guru-identity", JSON.stringify({ name: names.hero, token }));
+      setVoice(voiceOn());
       renderTop();
       if (!localStorage.getItem(STORY_SEEN_KEY)) showStory();
       else showMap();
