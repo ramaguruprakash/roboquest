@@ -9,12 +9,15 @@
   const PROGRESS_KEY = "rainier-progress";
   const VOICE_KEY = "rainier-voice";
   const LAST_KEY = "rainier-last";
+  const STORY_SEEN_KEY = "rainier-story-seen";
   const CUB_NAME = "Bramble";
   const AVATARS = ["🤸‍♀️", "🥋", "⛸️", "🛴", "🧗‍♀️", "🦸‍♀️"];
 
   const $ = (id) => document.getElementById(id);
   const els = {
     names: $("namesScreen"), heroName: $("heroName"), rabbitName: $("rabbitName"), avatarPick: $("avatarPick"), namesGo: $("namesGo"),
+    story: $("storyScreen"), storyPic: $("storyPic"), storyText: $("storyText"), storyDots: $("storyDots"),
+    storySpeak: $("storySpeak"), storyBack: $("storyBack"), storyNext: $("storyNext"), storyBtn: $("storyBtn"),
     map: $("mapScreen"), mapAreas: $("mapAreas"), mapHero: $("mapHero"), mapTitle: $("mapTitle"), mapSub: $("mapSub"),
     scene: $("sceneScreen"), areaTag: $("areaTag"), sceneTitle: $("sceneTitle"),
     companionEmoji: $("companionEmoji"), companionText: $("companionText"), sayAgain: $("sayAgain"),
@@ -102,6 +105,7 @@
   // ---------- Names screen ----------
 
   function showNames() {
+    els.story.hidden = true;
     els.names.hidden = false;
     els.map.hidden = true;
     els.scene.hidden = true;
@@ -128,25 +132,60 @@
       };
       localStorage.setItem(NAMES_KEY, JSON.stringify(names));
       renderTop();
-      showMap();
+      if (!localStorage.getItem(STORY_SEEN_KEY)) showStory();
+      else showMap();
     };
     els.heroName.focus();
+  }
+
+  // ---------- The opening story ----------
+
+  let page = 0;
+  function showStory() {
+    Guru.close();
+    els.names.hidden = true;
+    els.map.hidden = true;
+    els.scene.hidden = true;
+    els.overlay.hidden = true;
+    els.story.hidden = false;
+    page = 0;
+    renderPage();
+  }
+  function renderPage() {
+    const p = STORY_PAGES[page];
+    const text = fill(p.text);
+    els.storyPic.textContent = p.pic;
+    els.storyText.textContent = text;
+    els.storyDots.innerHTML = STORY_PAGES.map((_, i) => `<span class="dot${i === page ? " on" : ""}"></span>`).join("");
+    els.storyBack.hidden = page === 0;
+    els.storyNext.textContent = page === STORY_PAGES.length - 1 ? "Follow the paw prints! 🐾" : "Next ▸";
+    els.storyPic.classList.remove("pop");
+    void els.storyPic.offsetWidth;
+    els.storyPic.classList.add("pop");
+    speak(text);
+  }
+  function storyNext() {
+    if (page < STORY_PAGES.length - 1) { page++; renderPage(); return; }
+    localStorage.setItem(STORY_SEEN_KEY, "yes");
+    showMap();
   }
 
   // ---------- The map ----------
 
   function showMap() {
     Guru.close();
+    els.story.hidden = true;
     els.names.hidden = true;
     els.scene.hidden = true;
     els.overlay.hidden = true;
     els.map.hidden = false;
     els.mapHero.textContent = names.avatar;
     els.mapTitle.textContent = fill("{hero} and the missing {rabbit}");
-    const total = SCENES.length;
-    els.mapSub.textContent = done.size === 0
-      ? fill("{rabbit} the giant rabbit has wandered up Mt Rainier with a bear cub. Follow the paw prints!")
-      : fill(`${done.size} of ${total} scenes done. Keep following the paw prints!`);
+    // Story so far: the last thing that happened, so tomorrow picks up the thread.
+    const lastDone = SCENES.filter((s) => done.has(s.id)).pop();
+    els.mapSub.textContent = lastDone
+      ? fill(`Last time: ${lastDone.after}`)
+      : fill("A bear cub took {rabbit} up the mountain. Follow the paw prints!");
     els.mapAreas.innerHTML = "";
     AREAS.forEach((area, i) => {
       const unlocked = areaUnlocked(i);
@@ -193,6 +232,7 @@
     const area = AREAS.find((a) => a.id === scene.area);
     localStorage.setItem(LAST_KEY, id);
     els.map.hidden = true;
+    els.story.hidden = true;
     els.overlay.hidden = true;
     els.scene.hidden = false;
     els.nextBtn.hidden = true;
@@ -340,6 +380,10 @@
   els.nextBtn.addEventListener("click", next);
   els.backBtn.addEventListener("click", showMap);
   els.mapBtn.addEventListener("click", showMap);
+  els.storyBtn.addEventListener("click", showStory);
+  els.storyNext.addEventListener("click", storyNext);
+  els.storyBack.addEventListener("click", () => { if (page > 0) { page--; renderPage(); } });
+  els.storySpeak.addEventListener("click", () => speak(els.storyText.textContent, true));
   els.overlayGo.addEventListener("click", showMap);
   els.sayAgain.addEventListener("click", () => speak(els.companionText.textContent));
   els.taskSpeak.addEventListener("click", () => speak(els.taskText.textContent));
@@ -357,7 +401,8 @@
     saveProgress();
     Guru.resetChats();
     localStorage.removeItem(LAST_KEY);
-    showMap();
+    localStorage.removeItem(STORY_SEEN_KEY);
+    showStory();
   });
 
   // ---------- Start ----------
@@ -365,5 +410,6 @@
   setVoice(voiceOn());
   if (!Guru.speech.canSpeak) els.voiceBtn.hidden = true;
   if (!names) showNames();
+  else if (!localStorage.getItem(STORY_SEEN_KEY)) { renderTop(); showStory(); }
   else { renderTop(); showMap(); }
 })();

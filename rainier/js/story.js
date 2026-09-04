@@ -22,6 +22,17 @@
 
 const BELTS = ["white", "yellow", "orange", "green", "blue", "purple"];
 
+// The opening, told before the map: one picture and a few short words per page.
+// Read aloud, tap to turn. Short sentences, common words — a 7-year-old reads along.
+const STORY_PAGES = [
+  { pic: "🐰", text: "This is {rabbit}. {rabbit} is a giant rabbit. {rabbit} lives with {hero}." },
+  { pic: "🏠", text: "This is their home. Sunrise Meadow. Right under the big mountain." },
+  { pic: "🌅", text: "One morning, the hutch is open. {rabbit} is gone!" },
+  { pic: "🐾", text: "Look. Paw prints! Big ones. And little ones." },
+  { pic: "🐿️", text: "This is Pip. Pip saw it all. \"A bear cub took {rabbit}! They went up the mountain!\"" },
+  { pic: "🛴", text: "{hero} grabs her scooter. \"I'm coming, {rabbit}!\"" },
+];
+
 const AREAS = [
   {
     id: "meadow", title: "Sunrise Meadow", emoji: "🌼", belt: "yellow",
@@ -58,28 +69,28 @@ const AREAS = [
 const SCENES = [
   // ---------------- Area 1: Sunrise Meadow ----------------
   {
-    id: "meadow-1", area: "meadow", type: "signpost", title: "The open hutch",
+    id: "meadow-1", area: "meadow", type: "signpost", title: "The three signs",
     skills: ["reading"], reward: 1,
-    before: "Oh no! The hutch door is wide open. Big rabbit paws and little bear paws go off together across the grass. Pip the marmot squeaks: \"I saw them! They went towards the tall trees!\"",
-    task: "Read the signs. Tap the one that points to the trees.",
+    before: "The paw prints go to the fence. Three signs! Pip says: \"They went to the trees.\"",
+    task: "Tap the sign that says trees.",
     signs: [
       { text: "To the pond" },
       { text: "To the trees", correct: true },
       { text: "To the barn" },
     ],
-    wrong: "Hmm, that sign says \"{tapped}\". Pip said the TREES. Read them again slowly!",
-    after: "That's the one! {hero} hops on her scooter and zooms down the trail.",
-    hint: "Look for the word that starts with T-R. Trees!",
+    wrong: "That one says {tapped}. Find the word trees. T, R, ee!",
+    after: "Yes! Down the path we go. Oh! A big log is in the way.",
+    hint: "Trees starts with T and R. Which sign starts with T, R?",
   },
   {
-    id: "meadow-2", area: "meadow", type: "beam", title: "The wildflower log",
-    skills: ["maths"], reward: 1,
-    before: "A long log lies across the wildflower path, just like a balance beam at gymnastics! {hero} climbs on. Pip counts the flowers along it: 0, 1, 2, 3…",
-    task: "Hop 5, then hop 3. Where will {hero} land? Tap that flower.",
-    start: 0, hops: [5, 3], length: 10,
-    wrong: "Wobble! {hero} actually landed on {landed}. Count the hops again: 5 first, then 3 more.",
-    after: "Perfect landing! {hero} does a little curtsy on the log. 🤸",
-    hint: "Start at 0. Count 5 flowers: 1, 2, 3, 4, 5. Now count 3 more from there.",
+    id: "meadow-2", area: "meadow", type: "beam", title: "The log",
+    skills: ["maths"], reward: 2,
+    before: "A log! It is like a balance beam. Flowers grow on it. Pip says: \"Jump to flower 12. Use 3 jumps. Only 3!\"",
+    task: "Pick 3 jumps. Land on flower 12.",
+    start: 0, length: 14, target: 12, count: 3, jumps: [2, 3, 5],
+    wrong: "You landed on {landed}. Not 12! Change a jump. Try again.",
+    after: "12! Perfect landing. Pip claps. Past the log is a bag. Your bag!",
+    hint: "Try a big jump first. 5 and 5 make 10. What jump gets to 12?",
   },
   {
     id: "meadow-3", area: "meadow", type: "fill", title: "Packing the bag",
@@ -222,4 +233,4 @@ const SCENES = [
   },
 ];
 
-if (typeof module !== "undefined") module.exports = { BELTS, AREAS, SCENES };
+if (typeof module !== "undefined") module.exports = { BELTS, AREAS, SCENES, STORY_PAGES };

@@ -13,6 +13,7 @@
     <div class="logo">🐰 <span class="logo-text" id="logoText">Rainier Rescue</span></div>
     <nav class="header-nav" aria-label="Menu">
       <button id="mapBtn" class="nav-btn">🗺️ Map</button>
+      <button id="storyBtn" class="nav-btn">📖 Story</button>
       <span class="stat" title="Oranges earned">🍊 <b id="orangeCount">0</b></span>
       <span class="stat belt" id="beltBadge">⬜ white belt</span>
     </nav>
@@ -27,14 +28,28 @@
     <div class="names-card">
       <div class="names-hero">🐰</div>
       <h1>A giant rabbit is missing!</h1>
-      <p>Before we follow the paw prints, tell me two names. A grown-up can type them.</p>
-      <label>Your hero's name (that's you!)
+      <p>First, two names. A grown-up can help you type.</p>
+      <label>What is your name?
         <input id="heroName" maxlength="16" autocomplete="off" placeholder="Your name"></label>
-      <label>Your rabbit's name
+      <label>What is your rabbit's name?
         <input id="rabbitName" maxlength="16" autocomplete="off" placeholder="Biscuit"></label>
       <p class="names-pick-label">Pick your hero:</p>
       <div class="avatar-pick" id="avatarPick"></div>
-      <button class="run-btn big" id="namesGo">Let's go find the rabbit! →</button>
+      <button class="run-btn big" id="namesGo">Start the story →</button>
+    </div>
+  </div>
+
+  <!-- The opening story: one picture and a few words per page, tap to turn -->
+  <div class="screen story" id="storyScreen" hidden>
+    <div class="story-card">
+      <div class="story-pic" id="storyPic">🐰</div>
+      <p class="story-text" id="storyText"></p>
+      <div class="story-dots" id="storyDots"></div>
+      <div class="story-buttons">
+        <button class="speak-btn story-speak" id="storySpeak" title="Read it again">🔊</button>
+        <button class="reset-btn" id="storyBack">◂ Back</button>
+        <button class="run-btn big" id="storyNext">Next ▸</button>
+      </div>
     </div>
   </div>
 

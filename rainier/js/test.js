@@ -4,7 +4,7 @@
 // Run with:  node rainier/js/test.js
 
 const path = require("path");
-const { BELTS, AREAS, SCENES } = require("./story.js");
+const { BELTS, AREAS, SCENES, STORY_PAGES } = require("./story.js");
 
 // The puzzle modules register on window; give them one.
 global.window = {};
@@ -64,6 +64,22 @@ for (const s of SCENES) {
       break;
     }
     case "beam": {
+      if (Array.isArray(s.jumps)) {
+        // Construct mode: exactly `count` jumps from `jumps` must be able to land on `target`.
+        check(s.jumps.length >= 2, `${s.id}: needs at least 2 jump cards`);
+        check(s.count >= 2 && s.count <= 5, `${s.id}: count should be 2..5`);
+        check(s.target >= 0 && s.target <= s.length, `${s.id}: target off the beam`);
+        const avoid = new Set(s.avoid || []);
+        check(!avoid.has(s.target), `${s.id}: the target is a puddle`);
+        let plans = 0;
+        (function dfs(at, depth) {
+          if (depth === s.count) { if (at === s.target) plans++; return; }
+          for (const j of s.jumps) { const nx = at + j; if (nx >= 0 && nx <= s.length && !avoid.has(nx)) dfs(nx, depth + 1); }
+        })(s.start, 0);
+        check(plans > 0, `${s.id}: no plan of ${s.count} jumps reaches ${s.target}`);
+        check(s.length <= 20, `${s.id}: beam longer than 20 will not fit on screen`);
+        break;
+      }
       check(Array.isArray(s.hops) && s.hops.length, `${s.id}: needs hops`);
       const landing = s.hops.reduce((a, b) => a + b, s.start);
       check(s.start >= 0 && s.start <= s.length, `${s.id}: start off the beam`);
@@ -125,6 +141,29 @@ for (const s of SCENES) {
       break;
   }
 }
+
+console.log("opening story");
+check(Array.isArray(STORY_PAGES) && STORY_PAGES.length >= 3, "the opening needs at least 3 pages");
+for (const [i, p] of (STORY_PAGES || []).entries()) {
+  check(p.pic && typeof p.text === "string" && p.text.length > 5, `page ${i + 1}: needs pic and text`);
+  for (const v of vars(p.text)) check(ALLOWED_VARS.has(v), `page ${i + 1}: unknown placeholder {${v}}`);
+}
+
+// Readability: a 7-year-old reads along. Sentences of 10 words or fewer, words of 9 letters or fewer.
+// Warnings, not failures, while older scenes are still being rewritten.
+console.log("readability");
+let warnings = 0;
+function readable(where, text) {
+  const clean = String(text).replace(/\{\w+\}/g, "Name").replace(/["“”]/g, "");
+  for (const sent of clean.split(/[.!?…]+/).map((x) => x.trim()).filter(Boolean)) {
+    const words = sent.split(/\s+/);
+    if (words.length > 10) { warnings++; console.log(`  ⚠️ ${where}: long sentence (${words.length} words): "${sent}"`); }
+    for (const w of words) if (w.replace(/[^A-Za-z']/g, "").length > 9) { warnings++; console.log(`  ⚠️ ${where}: long word "${w}"`); }
+  }
+}
+for (const [i, p] of (STORY_PAGES || []).entries()) readable(`page ${i + 1}`, p.text);
+for (const s of SCENES) for (const f of ["before", "task", "after", "wrong", "hint"]) readable(`${s.id}.${f}`, s[f]);
+if (!warnings) console.log("  every sentence is short and every word is small");
 
 console.log("area mix");
 for (const a of AREAS) {

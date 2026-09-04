@@ -300,3 +300,36 @@ button { font-family: inherit; }
 .thing-icon { font-size: 2.4rem; line-height: 1; }
 .thing-n { font-family: var(--display-font); font-size: 1.4rem; }
 .thing-label { font-size: 0.85rem; }
+
+/* ---------- The opening story ---------- */
+.story { display: flex; align-items: center; justify-content: center; }
+.story-card { max-width: 640px; width: 100%; background: var(--card); border: 3px solid var(--ink); border-radius: 28px; padding: 34px 34px 26px; display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center; }
+.story-pic { font-size: 7rem; line-height: 1; }
+.story-pic.pop { animation: pop-in 0.35s ease-out; }
+.story-text { font-family: var(--display-font); font-size: 1.7rem; line-height: 1.5; min-height: 3.4em; }
+.story-dots { display: flex; gap: 8px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: var(--tile-line); }
+.dot.on { background: var(--orange); }
+.story-buttons { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.story-speak { position: static; width: 44px; height: 44px; font-size: 1.2rem; }
+
+/* ---------- Puzzle: beam, construct mode ---------- */
+.beam-top { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
+.plan { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.plan-slots { display: flex; gap: 10px; }
+.plan-slot { width: 66px; height: 66px; font-family: var(--display-font); font-size: 1.6rem; border: 3px dashed var(--tile-line); border-radius: 16px; background: var(--tile); color: var(--tile-line); cursor: default; }
+.plan-slot.filled { border-style: solid; border-color: var(--orange); background: #fff1e6; color: var(--ink); cursor: pointer; }
+.plan-slot.filled:hover { background: #ffe0c7; }
+.plan-go { font-size: 1.2rem; padding: 12px 22px; }
+.jump-cards { display: flex; gap: 12px; }
+.jump-card { min-width: 84px; height: 66px; font-family: var(--display-font); font-size: 1.7rem; background: var(--card); border: 3px solid var(--pine); border-radius: 16px; color: var(--pine-dark); cursor: pointer; box-shadow: 0 4px 0 var(--pine-dark); transition: transform 0.08s; }
+.jump-card:hover:not(:disabled) { transform: translateY(-2px); }
+.jump-card:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 var(--pine-dark); }
+.jump-card:disabled { opacity: 0.4; box-shadow: none; }
+.beam-spot.goal .beam-flower { font-size: 1.9rem; }
+.beam-spot.goal .beam-num { color: var(--orange-dark); font-size: 1.15rem; }
+.beam-spot.puddle .beam-num { color: var(--sky); }
+.beam-spot:disabled { cursor: default; }
+.beam-hero.splash { animation: splash 0.5s; }
+@keyframes splash { 30% { transform: translateX(-50%) translateY(14px) rotate(-15deg); } 100% { transform: translateX(-50%); } }
+.beam-spot:disabled { opacity: 1; color: var(--ink); }
