@@ -10,7 +10,7 @@
   const VOICE_KEY = "rainier-voice";
   const LAST_KEY = "rainier-last";
   const STORY_SEEN_KEY = "rainier-story-seen";
-  const CUB_NAME = "Bramble";
+  const CUB_NAME = "Teddy";
   const AVATARS = ["🤸‍♀️", "🥋", "⛸️", "🛴", "🧗‍♀️", "🦸‍♀️"];
 
   const $ = (id) => document.getElementById(id);
