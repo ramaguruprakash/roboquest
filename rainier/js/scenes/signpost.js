@@ -1,7 +1,7 @@
 "use strict";
 
 // Signpost: read a few signs, tap the right one.
-//   signs: [{ text, correct? }]   exactly one is correct
+//   signs: [{ text, icon?, correct? }]   exactly one is correct; icon is a picture on the sign
 // The task is read aloud; the signs are NOT — reading them is the puzzle.
 // After a miss the companion reads the tapped sign aloud, so a wrong tap still teaches.
 
@@ -16,7 +16,7 @@ window.SCENE_TYPES.signpost = {
       const s = scene.signs[i];
       const b = document.createElement("button");
       b.className = "sign";
-      b.textContent = api.fill(s.text);
+      b.innerHTML = (s.icon ? `<span class="sign-icon">${s.icon}</span>` : "") + `<span class="sign-text">${api.fill(s.text)}</span>`;
       b.addEventListener("click", () => {
         if (b.disabled) return;
         tapped.push(api.fill(s.text));

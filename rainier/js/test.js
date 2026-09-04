@@ -8,7 +8,7 @@ const { BELTS, AREAS, SCENES } = require("./story.js");
 
 // The puzzle modules register on window; give them one.
 global.window = {};
-for (const f of ["signpost", "beam", "fill", "order", "segments", "cards"]) require(path.join(__dirname, "scenes", f + ".js"));
+for (const f of ["signpost", "beam", "fill", "order", "segments", "cards", "boards", "listen", "note"]) require(path.join(__dirname, "scenes", f + ".js"));
 const TYPES = global.window.SCENE_TYPES;
 
 let failures = 0;
@@ -16,7 +16,7 @@ function check(cond, msg) {
   if (!cond) { failures++; console.log("  ❌ " + msg); }
 }
 
-const ALLOWED_VARS = new Set(["hero", "rabbit", "cub", "tapped", "landed", "guess", "total", "over", "position", "cubColor"]);
+const ALLOWED_VARS = new Set(["hero", "rabbit", "cub", "tapped", "landed", "guess", "total", "over", "position", "cubColor", "word", "standing"]);
 function vars(text) {
   return [...String(text || "").matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
 }
@@ -93,6 +93,26 @@ for (const s of SCENES) {
     case "segments": {
       check(s.total >= 4 && s.total <= 12, `${s.id}: total should be 4..12`);
       check(s.eat > 0 && s.eat < s.total, `${s.id}: eat must be between 1 and total-1`);
+      break;
+    }
+    case "boards": {
+      check(s.total >= 4 && s.total <= 16, `${s.id}: total should be 4..16`);
+      check(s.chop > 0 && s.chop < s.total, `${s.id}: chop must be between 1 and total-1`);
+      break;
+    }
+    case "listen": {
+      check(s.words && s.words.length >= 3 && s.words.length <= 6, `${s.id}: 3 to 6 words`);
+      check(s.words.includes(s.answer), `${s.id}: answer "${s.answer}" must be one of the words`);
+      check(new Set(s.words).size === s.words.length, `${s.id}: words must differ`);
+      break;
+    }
+    case "note": {
+      check(typeof s.note === "string" && s.note.length > 10, `${s.id}: needs a note`);
+      check(s.objects && s.objects.length >= 3, `${s.id}: needs at least 3 objects`);
+      check(Number.isInteger(s.answer) && s.objects[s.answer], `${s.id}: answer must index an object`);
+      const keys = s.objects.map((o) => JSON.stringify([o.icon, o.n, o.label]));
+      check(new Set(keys).size === keys.length, `${s.id}: objects must differ`);
+      for (const o of s.objects) for (const v of vars(o.label)) check(ALLOWED_VARS.has(v), `${s.id}: unknown placeholder {${v}} in object label`);
       break;
     }
     case "cards": {

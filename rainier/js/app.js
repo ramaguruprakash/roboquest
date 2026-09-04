@@ -47,8 +47,9 @@
     els.voiceBtn.textContent = on ? "🔊" : "🔇";
     if (!on) Guru.speech.stop();
   }
-  function speak(text) {
-    if (!voiceOn() || !Guru.speech.canSpeak) return;
+  // force: the kid explicitly asked to hear it (tap a word, tap the parrot), so ignore the toggle.
+  function speak(text, force) {
+    if ((!voiceOn() && !force) || !Guru.speech.canSpeak) return;
     Guru.speech.speak(text, { rate: 0.92 });
   }
 
@@ -206,7 +207,7 @@
     current = { scene, area, attempts: 0, lastWrong: "", solvedNow: false, mechanic: null };
     const api = {
       names: { hero: names.hero, rabbit: names.rabbit, cub: CUB_NAME, avatar: names.avatar },
-      fill, shuffle, wait,
+      fill, shuffle, wait, speak,
       solved: () => onSolved(),
       wrong: (vars) => onWrong(vars),
       cheer: (text) => companionSay(fill(text)),

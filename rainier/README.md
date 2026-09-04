@@ -23,7 +23,7 @@ karate belt (yellow, orange, green, blue, purple); every scene earns oranges.
 |---|---|
 | `index.html` / `style.css` | The names screen, the map, one scene at a time |
 | `js/story.js` | All the data: `AREAS`, `SCENES`, belts. Text may use `{hero}`, `{rabbit}`, `{cub}` |
-| `js/scenes/*.js` | One puzzle type per file: `signpost`, `beam`, `fill`, `order`, `segments`, `cards` |
+| `js/scenes/*.js` | One puzzle type per file: `signpost`, `beam`, `fill`, `order`, `segments`, `cards`, `boards`, `listen`, `note` |
 | `js/app.js` | The runner: progress, unlocking, read-aloud, oranges, belts, Dronacharya |
 | `js/test.js` | `node rainier/js/test.js` checks every scene is solvable and every area mixes skills |
 | `../js/guru.js`, `../guru.css` | Dronacharya, shared with RoboQuest (`kind: "quest"`) |
