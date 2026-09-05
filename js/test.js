@@ -4,7 +4,7 @@
 
 const Robo = require("./interpreter.js");
 const { LEVELS, HANDBOOK } = require("./levels.js");
-const { WEB_LEVELS } = require("./weblevels.js");
+const { WEB_LEVELS, WEB_HANDBOOK } = require("./weblevels.js");
 
 let failures = 0;
 
@@ -166,6 +166,32 @@ for (const page of HANDBOOK) {
   } catch (e) {
     failures++;
     console.log(`  ❌ handbook "${page.name}" threw: ${e.message}`);
+  }
+}
+
+// Tag Book pages: every page has its parts, and every example's tags close
+// properly (the browser renders the real thing — this catches typos early).
+console.log("tag book pages");
+{
+  const VOID = new Set(["img", "br", "hr", "input"]);
+  const names = new Set();
+  for (const page of WEB_HANDBOOK) {
+    check(!names.has(page.name), `tag book duplicate page "${page.name}"`);
+    names.add(page.name);
+    for (const field of ["name", "syntax", "explain", "example", "exampleNote"]) {
+      check(typeof page[field] === "string" && page[field].length > 0, `tag book "${page.name}": missing ${field}`);
+    }
+    const stack = [];
+    const code = page.example.replace(/<!--[\s\S]*?-->/g, "");
+    for (const m of code.matchAll(/<(\/?)([a-z0-9]+)[^>]*>/g)) {
+      const [, close, tag] = m;
+      if (VOID.has(tag)) continue;
+      if (!close) stack.push(tag);
+      else check(stack.pop() === tag, `tag book "${page.name}": </${tag}> doesn't match its opener`);
+    }
+    check(stack.length === 0, `tag book "${page.name}": unclosed <${stack[0]}>`);
+    check(!!page.scripts === /onclick=/.test(page.example),
+      `tag book "${page.name}": scripts flag must match whether the example uses onclick`);
   }
 }
 

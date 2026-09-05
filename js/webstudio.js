@@ -213,6 +213,65 @@ const WebStudio = (() => {
     return section;
   }
 
+  // ---------- Robo's Tag Book (the studio's handbook) ----------
+  // Same shape as the spellbook: one card per tag — syntax, plain words, then
+  // the example code beside the page it produces. The demo is a real iframe
+  // in the studio's pretty wrapper, so what the kid sees here is exactly what
+  // the same code does in a level.
+
+  // Colour the code so tags, settings and notes are easy to tell apart.
+  // One pass over the raw text: each token is escaped and wrapped exactly once.
+  function colorHTML(code) {
+    const TOKEN = /(<!--[\s\S]*?-->)|(<\/?[a-z0-9]+|\/?>)|([a-z-]+)=("[^"]*")|(\s+|[^<>\s]+|[<>])/gi;
+    let out = "";
+    for (const [, note, tag, attr, val, text] of code.matchAll(TOKEN)) {
+      if (note) out += `<span class="code-note">${ESC(note)}</span>`;
+      else if (tag) out += `<span class="code-tag">${ESC(tag)}</span>`;
+      else if (attr) out += `<span class="code-attr">${ESC(attr)}</span>=<span class="code-val">${ESC(val)}</span>`;
+      else out += ESC(text);
+    }
+    return out;
+  }
+
+  function renderTagBook() {
+    els.bookBody.innerHTML = "";
+    for (const page of WEB_HANDBOOK) {
+      const sec = document.createElement("section");
+      sec.className = "home-card spell-page tag-page" + (page.peek ? " peek" : "");
+      sec.innerHTML =
+        (page.peek ? `<span class="peek-badge">🔮 Sneak peek: ${ESC(page.peek)}</span>` : "") +
+        `<h3><code>${ESC(page.syntax)}</code></h3>` +
+        `<p>${ESC(page.explain)}</p>`;
+
+      const demo = document.createElement("div");
+      demo.className = "tag-demo";
+      demo.innerHTML = `<pre class="book-example tag-code">${colorHTML(page.example)}</pre>`;
+      const frame = document.createElement("iframe");
+      frame.className = "tag-frame";
+      frame.title = "What the code makes";
+      // Same sandbox as the studio panes; only the JavaScript page may run scripts.
+      frame.setAttribute("sandbox", "allow-same-origin" + (page.scripts ? " allow-scripts" : ""));
+      frame.srcdoc = wrap(page.example);
+      demo.appendChild(frame);
+      sec.appendChild(demo);
+
+      const note = document.createElement("p");
+      note.className = "book-note";
+      note.textContent = "↳ " + page.exampleNote;
+      sec.appendChild(note);
+      els.bookBody.appendChild(sec);
+    }
+  }
+  function showTagBook() {
+    renderTagBook();
+    els.bookScreen.hidden = false;
+    els.bookScreen.scrollTop = 0;
+  }
+  function hideTagBook() {
+    els.bookScreen.hidden = true;
+    els.bookBody.innerHTML = ""; // drops the demo iframes
+  }
+
   // ---------- Open / close ----------
 
   function lookupEls() {
@@ -247,6 +306,10 @@ const WebStudio = (() => {
       winSub: $("studioWinSub"),
       winNext: $("studioWinNext"),
       winStay: $("studioWinStay"),
+      bookBtn: $("studioBookBtn"),
+      bookScreen: $("tagBookScreen"),
+      bookBody: $("tagBookBody"),
+      bookBack: $("tagBookBack"),
     };
     els.editor.addEventListener("input", () => {
       localStorage.setItem(CODE_KEY(level().id), els.editor.value);
@@ -260,6 +323,8 @@ const WebStudio = (() => {
       say("Fresh page! Ready when you are.");
     });
     els.back.addEventListener("click", close);
+    els.bookBtn.addEventListener("click", showTagBook);
+    els.bookBack.addEventListener("click", hideTagBook);
     els.guruBtn.addEventListener("click", () => Guru.open());
     els.hintBtn.addEventListener("click", () => { els.hintBox.hidden = !els.hintBox.hidden; });
     els.hintAskGuru.addEventListener("click", () => {
@@ -279,6 +344,7 @@ const WebStudio = (() => {
       els.editor.focus();
     });
     document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !els.bookScreen.hidden) return hideTagBook();
       if (e.key === "Escape" && !els.screen.hidden) close();
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !els.screen.hidden) {
         e.preventDefault();

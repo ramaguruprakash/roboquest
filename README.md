@@ -95,7 +95,7 @@ Errors are friendly and kid-voiced ("Bonk! 🤕 Robo walked into a wall", typo s
 | `js/app.js` | UI: rendering, animation, progress, speech bubble |
 | `js/guru.js` / `guru.css` | Dronacharya: the chat drawer, sign-in, hold-to-talk mic, spoken replies, and the plain-English run report sent to the proxy. Shared with the sibling game via `Guru.init` |
 | `proxy/api/guru.js` | Vercel edge function: password check, rate limit, the guru's system prompt, the Claude call |
-| `js/weblevels.js` / `js/webstudio.js` | Robo's Web Studio — HTML levels with a live preview |
+| `js/weblevels.js` / `js/webstudio.js` | Robo's Web Studio — HTML levels with a live preview, plus **Robo's Tag Book** (`WEB_HANDBOOK`): one live-rendered page per tag and a sneak peek at CSS and JavaScript |
 | `js/test.js` | `node js/test.js` — verifies every level's solution wins and obeys its own rules |
 | `rainier/` | **Rainier Rescue**, a tap-only reading-and-maths quest for a 7-year-old — see [`rainier/README.md`](rainier/README.md) |
 

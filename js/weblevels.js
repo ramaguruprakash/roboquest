@@ -250,4 +250,117 @@ const WEB_LEVELS = [
   },
 ];
 
-if (typeof module !== "undefined") module.exports = { WEB_LEVELS, WEB_META, WEB_IMAGES, WEB_SRC_OK };
+// Robo's Tag Book — the Web Studio's handbook. One page per tag the studio
+// teaches, then three "sneak peek" pages that open the door to CSS and
+// JavaScript. Every page shows its example rendered LIVE next to the code —
+// the browser is the demo. `scripts: true` lets the demo iframe run JS.
+const WEB_HANDBOOK = [
+  {
+    name: "h1",
+    syntax: "<h1>Big headline</h1>",
+    explain:
+      "The biggest, boldest words on the page — the title! Every tag is a hug: an opener <h1> in front, " +
+      "a closer </h1> behind, and your words in the middle. The little slash / is what makes a tag a closer. " +
+      "Most pages have just ONE h1, right at the top.",
+    example: "<h1>Hello, Internet!</h1>",
+    exampleNote: "Plain words go in… a giant headline comes out.",
+  },
+  {
+    name: "p",
+    syntax: "<p>A paragraph of words.</p>",
+    explain:
+      "p is for paragraph — normal-sized text for telling your story. Each <p> gets its own line " +
+      "with a little breathing space above and below. Long story? Use lots of paragraphs, one hug each.",
+    example: "<p>Robo is a very good robot.</p>\n<p>Today it learned HTML!</p>",
+    exampleNote: "Two hugs, two paragraphs, each on its own line.",
+  },
+  {
+    name: "h2",
+    syntax: "<h2>Smaller headline</h2>",
+    explain:
+      "A smaller headline for the parts INSIDE your page — like signs above each animal in a zoo. " +
+      "The number is the size: h1 is the biggest, h2 a bit smaller, and it goes all the way down to h6 (tiny!). " +
+      "One h1 for the title, then as many h2s as you have parts.",
+    example: "<h1>🎪 Robo's Zoo</h1>\n<h2>The Lion</h2>\n<p>🦁 Roars. Likes naps.</p>\n<h2>The Penguin</h2>\n<p>🐧 Waddles. Eats fish.</p>",
+    exampleNote: "One big sign for the zoo, a smaller sign for each animal.",
+  },
+  {
+    name: "ul / li",
+    syntax: "<ul> <li>item</li> </ul>",
+    explain:
+      "A list! <ul> is the backpack and each <li> is a thing inside it — the page draws a dot for every item. " +
+      "The <li> hugs go INSIDE the <ul> hug (that's why we push them in with 2 spaces, just like a repeat loop). " +
+      "Fun fact: ul means \"unordered list\". Swap it for <ol> and the dots become 1, 2, 3!",
+    example: "<p>Top snacks:</p>\n<ul>\n  <li>🍕 Pizza</li>\n  <li>🍪 Cookies</li>\n  <li>🥭 Mango</li>\n</ul>",
+    exampleNote: "Three items in the backpack, three dots on the page.",
+  },
+  {
+    name: "img",
+    syntax: '<img src="img/robo.svg">',
+    explain:
+      "A picture! This tag is a different SHAPE: it has no closer, because there are no words to hug. " +
+      "Instead it carries a setting inside it — src (short for \"source\") — that says WHICH picture to show. " +
+      "The picture's name goes between the quotes, spelled exactly. A wrong letter = an empty frame.",
+    example: '<p>Meet the team:</p>\n<img src="img/robo.svg">\n<img src="img/gem.svg">',
+    exampleNote: "Two img tags, two pictures. No closers needed.",
+  },
+  {
+    name: "button",
+    syntax: "<button>Click me!</button>",
+    explain:
+      "A real button you can press! The words you hug are what's written on it. " +
+      "Try clicking the one in the demo — it squishes. It doesn't DO anything yet, though… " +
+      "buttons need JavaScript to learn tricks. Sneak peek at the bottom of this book! 😉",
+    example: "<p>Robo's control panel:</p>\n<button>🍔 Feed Robo</button>\n<button>🤗 Pat Robo</button>",
+    exampleNote: "Press them! They squish, but nothing happens — yet.",
+  },
+  {
+    name: "notes",
+    syntax: "<!-- a note to yourself -->",
+    explain:
+      "A secret note that the page IGNORES. Anything between <!-- and --> is invisible to visitors — " +
+      "it's just for you (or whoever reads your code next) to remember what goes where. " +
+      "The studio's starter pages use notes to show you where to type.",
+    example: "<!-- The headline goes first: -->\n<h1>My Page</h1>\n<!-- TODO: add a picture of my cat -->\n<p>Coming soon!</p>",
+    exampleNote: "Four lines of code, but only two things show up. The notes stay hidden.",
+  },
+  {
+    name: "CSS paint",
+    peek: "CSS",
+    syntax: '<p style="color: hotpink">…</p>',
+    explain:
+      "HTML says WHAT is on the page. A second language, CSS, says how it LOOKS. " +
+      "The quickest taste: add style=\"…\" inside any opener and write a rule like color: hotpink " +
+      "or font-size: 40px. Each rule is a setting name, a colon, and the value. " +
+      "Separate rules with semicolons. Try colors like gold, tomato, skyblue, limegreen!",
+    example: '<h1 style="color: tomato">Loud headline</h1>\n<p style="color: hotpink; font-size: 26px">Big pink words!</p>\n<p style="background: gold; padding: 10px">A sunny box.</p>',
+    exampleNote: "Same tags as before — CSS repaints them.",
+  },
+  {
+    name: "CSS rules",
+    peek: "CSS",
+    syntax: "<style> p { color: purple; } </style>",
+    explain:
+      "Painting every tag one by one is slow. A <style> hug holds RULES for the whole page: " +
+      "p { color: purple; } means \"ALL paragraphs, be purple\" — like a repeat loop for looks. " +
+      "The word in front (p, h1, li, button…) picks the tags; the curly braces { } hold the rules for them. " +
+      "Change one rule, and every matching tag changes at once.",
+    example: "<style>\n  h1 { color: limegreen; }\n  li { color: purple; font-size: 22px; }\n</style>\n<h1>Rules rule!</h1>\n<ul>\n  <li>Every item…</li>\n  <li>…is purple…</li>\n  <li>…from one rule.</li>\n</ul>",
+    exampleNote: "Two rules in the style hug, and the whole list obeys.",
+  },
+  {
+    name: "JavaScript",
+    peek: "JavaScript",
+    syntax: '<button onclick="…">',
+    explain:
+      "The third language, JavaScript, makes pages DO things — it's the closest cousin of Robo's language. " +
+      "Give a button an onclick=\"…\" setting, and the code inside runs every time it's clicked. " +
+      "this means \"the button that was clicked\", and this.textContent is the words written on it — " +
+      "so this.textContent = 'Beep!' rewrites the button, live. That's a real program running in your page!",
+    example: "<h1>Poke the robot</h1>\n<button onclick=\"this.textContent = 'Beep! 🤖'\">🤖 Poke me</button>\n<button onclick=\"this.textContent = 'Zzz… 😴'\">🤖 Say goodnight</button>",
+    exampleNote: "Click a button — the code inside onclick changes its words. Buttons with tricks!",
+    scripts: true,
+  },
+];
+
+if (typeof module !== "undefined") module.exports = { WEB_LEVELS, WEB_META, WEB_IMAGES, WEB_SRC_OK, WEB_HANDBOOK };
